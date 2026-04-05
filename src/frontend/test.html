@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Game WASM Test</title>
+<style>
+body { font-family: Arial, sans-serif; }
+button { margin: 5px; padding: 8px 12px; font-size: 14px; }
+input { margin: 5px; width: 80px; padding: 4px; }
+pre { background: #1e1e1e; color: #ddd; padding: 12px; max-height: 600px; overflow-y: auto; font-family: Consolas, monospace; }
+.success { color: #4ade80; }
+.error { color: #f87171; }
+.info { color: #60a5fa; }
+</style>
+</head>
+<body>
+<h1>Game WASM Test</h1>
+
+<button id="initBtn">GameInit</button>
+<button id="deinitBtn">GameDeinit</button>
+<button id="updateBtn">GameUpdate</button>
+<button id="tickBtn">GameTick (получить массив)</button>
+<button id="freeTickBtn">Free Array</button>
+<br><br>
+
+X: <input id="xInput" type="number" value="0">
+Y: <input id="yInput" type="number" value="0">
+New ID: <input id="idInput" type="number" value="1" min="0" max="255">
+New Status: <input id="statusInput" type="number" value="1" min="0" max="255">
+<button id="clearBtn">Очистить лог</button>
+
+<pre id="output">Log:</pre>
+
+<script>
+const output = document.getElementById('output');
+function log(msg, type = 'info') {
+    const line = document.createElement('div');
+    line.textContent = msg;
+    if (type === 'success') line.className = 'success';
+    else if (type === 'error') line.className = 'error';
+    else line.className = 'info';
+    output.appendChild(line);
+    output.scrollTop = output.scrollHeight;
+}
+
+let wasmInstance = null;
+let gamePtr = 0;
+let tickPtr = 0;  
+let tickLen = 0;  
+
+fetch('game.wasm')
+    .then(response => response.arrayBuffer())
+    .then(bytes => WebAssembly.instantiate(bytes, {}))
+    .then(results => {
+        wasmInstance = results.instance;
+        log('WASM успешно загружен. Экспорты: ' + Object.keys(wasmInstance.exports).join(', '), 'success');
+
+        const needed = ['GameInit', 'GameDeinit', 'GameUpdate', 'GameTick', 'getArrayLen', 'getNewTickBlockSize', 'freeArray'];
+        for (const fn of needed) {
+            if (!wasmInstance.exports[fn]) log(`WARNING: ${fn} не экспортирован!`, 'error');
+        }
+    })
+    .catch(err => log('Не удалось загрузить WASM: ' + err, 'error'));
+
+// GameInit
+document.getElementById('initBtn').onclick = () => {
+    if (!wasmInstance || !wasmInstance.exports.GameInit) return log('GameInit отсутствует', 'error');
+    try {
+        gamePtr = wasmInstance.exports.GameInit();
+        log(`GameInit → указатель: ${gamePtr}`, 'success');
+    } catch (e) { log('Ошибка GameInit: ' + e, 'error'); }
+};
+
+// GameDeinit
+document.getElementById('deinitBtn').onclick = () => {
+    if (!wasmInstance || !wasmInstance.exports.GameDeinit || gamePtr === 0) return log('GameDeinit не готов', 'error');
+    try {
+        wasmInstance.exports.GameDeinit(gamePtr);
+        log(`GameDeinit вызван`, 'success');
+        gamePtr = 0;
+    } catch (e) { log('Ошибка GameDeinit: ' + e, 'error'); }
+};
+
+// GameUpdate
+document.getElementById('updateBtn').onclick = () => {
+    if (!wasmInstance || !wasmInstance.exports.GameUpdate || gamePtr === 0) return log('GameUpdate не готов', 'error');
+    const x = parseInt(document.getElementById('xInput').value) || 0;
+    const y = parseInt(document.getElementById('yInput').value) || 0;
+    const newId = parseInt(document.getElementById('idInput').value) || 0;
+    const newStatus = parseInt(document.getElementById('statusInput').value) || 0;
+    try {
+        const result = wasmInstance.exports.GameUpdate(gamePtr, x, y, newId, newStatus);
+        log(`GameUpdate(${x},${y},${newId},${newStatus}) → ${result}`, result === 0 ? 'success' : 'error');
+    } catch (e) { log('Ошибка GameUpdate: ' + e, 'error'); }
+};
+
+document.getElementById('tickBtn').onclick = () => {
+    if (!wasmInstance || !wasmInstance.exports.GameTick || gamePtr === 0) 
+        return log('GameTick не готов или GameInit не вызван', 'error');
+
+    try {
+        if (tickPtr !== 0 && wasmInstance.exports.freeArray) {
+            wasmInstance.exports.freeArray();
+        }
+
+        tickPtr = wasmInstance.exports.GameTick(gamePtr);
+        tickLen = wasmInstance.exports.getArrayLen ? wasmInstance.exports.getArrayLen() : 0;
+        const structSize = wasmInstance.exports.getNewTickBlockSize ? wasmInstance.exports.getNewTickBlockSize() : 0;
+
+        log(`GameTick выполнен → ptr: ${tickPtr}, len: ${tickLen}, structSize: ${structSize}`, 'success');
+
+        if (tickLen === 0 || structSize === 0) {
+            log('Массив пустой', 'error');
+            return;
+        }
+
+        const mem = wasmInstance.exports.memory;
+        const result = [];
+
+        for (let i = 0; i < tickLen; i++) {
+            const offset = i * structSize;
+
+            const block = {
+                x:         new DataView(mem.buffer, tickPtr + offset + 0, 4).getUint32(0, true),   // usize на 32-bit обычно 4 байта
+                y:         new DataView(mem.buffer, tickPtr + offset + 4, 4).getUint32(0, true),
+                newStatus: new DataView(mem.buffer, tickPtr + offset + 8, 4).getUint32(0, true),
+            };
+
+            result.push(block);
+
+            log(`  [${i}] x=${block.x}, y=${block.y}, newStatus=${block.newStatus}`, 'success');
+        }
+
+        log(`Итого получено ${result.length} блоков NewTickBlock`, 'success');
+        console.table(result);   
+
+    } catch (e) {
+        log('Ошибка при вызове GameTick: ' + e, 'error');
+    }
+};
+
+document.getElementById('freeTickBtn').onclick = () => {
+    if (!wasmInstance || !wasmInstance.exports.freeArray || tickPtr === 0) return log('Нет массива для освобождения', 'error');
+    try {
+        wasmInstance.exports.freeArray();
+        log('Массив NewTickBlock освобождён', 'success');
+        tickPtr = 0;
+        tickLen = 0;
+    } catch (e) { log('Ошибка freeArray: ' + e, 'error'); }
+};
+
+document.getElementById('clearBtn').onclick = () => {
+    output.innerHTML = '';
+    log('Лог очищен.', 'info');
+};
+</script>
+</body>
+</html>

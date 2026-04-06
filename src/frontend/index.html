@@ -1,702 +1,675 @@
 <!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DerEnots</title>
-  <style>
-    *, *::before, *::after {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #0d0d0d;
-      color: #c8c8c8;
-      user-select: none;
-    }
-    #app {
-      display: flex;
-      flex-direction: column;
-      width: 100%;
-      height: 100%;
-    }
-    #top-panel {
-      height: 50px;
-      min-height: 50px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 20px;
-      background: linear-gradient(180deg, #161616, #111);
-      border-bottom: 1px solid #2a1a1a;
-      z-index: 20;
-      flex-shrink: 0;
-    }
-    #tick-counter {
-      font-size: 20px;
-      font-weight: 700;
-      color: #b04040;
-      min-width: 160px;
-      letter-spacing: 0.5px;
-      font-variant-numeric: tabular-nums;
-    }
-    #speed-wrap {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    #speed-wrap label {
-      font-size: 13px;
-      color: #888;
-    }
-    #speed-slider {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 200px;
-      height: 5px;
-      border-radius: 3px;
-      background: #2a1a1a;
-      outline: none;
-      cursor: pointer;
-    }
-    #speed-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: #b04040;
-      cursor: pointer;
-      border: 2px solid #222;
-      box-shadow: 0 0 6px rgba(176,64,64,0.4);
-    }
-    #speed-slider::-moz-range-thumb {
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: #b04040;
-      cursor: pointer;
-      border: 2px solid #222;
-    }
-    #speed-val {
-      font-size: 13px;
-      color: #b04040;
-      min-width: 52px;
-      text-align: center;
-      font-weight: 600;
-    }
-    #top-right {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .btn {
-      padding: 7px 20px;
-      border: 1px solid #2a2a2a;
-      border-radius: 5px;
-      background: #1c1c1c;
-      color: #c8c8c8;
-      font-size: 13px;
-      cursor: pointer;
-      transition: all .15s ease;
-      font-weight: 500;
-      letter-spacing: 0.3px;
-    }
-    .btn:hover {
-      background: #282828;
-      border-color: #b04040;
-    }
-    .btn:active {
-      transform: scale(0.96);
-    }
-    .btn-run {
-      min-width: 100px;
-    }
-    .btn-run.running {
-      background: #b04040;
-      color: #fff;
-      border-color: #c05050;
-      box-shadow: 0 0 10px rgba(176,64,64,0.3);
-    }
-    #lang-btn {
-      padding: 7px 12px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    #canvas-wrap {
-      flex: 1;
-      position: relative;
-      overflow: hidden;
-      background: #080808;
-      cursor: crosshair;
-    }
-    #game-canvas {
-      display: block;
-      position: absolute;
-      top: 0;
-      left: 0;
-      image-rendering: pixelated;
-    }
-    #bottom-panel {
-      height: 15%;
-      min-height: 110px;
-      max-height: 145px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 20px;
-      background: linear-gradient(0deg, #161616, #111);
-      border-top: 1px solid #2a1a1a;
-      z-index: 20;
-      flex-shrink: 0;
-      overflow-x: auto;
-      overflow-y: hidden;
-    }
-    .brush-card, .obs-card, .clear-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      width: 82px;
-      min-width: 82px;
-      height: 82px;
-      border: 2px solid #252525;
-      border-radius: 8px;
-      background: #161616;
-      cursor: pointer;
-      transition: all .15s ease;
-      gap: 4px;
-      position: relative;
-    }
-    .brush-card:hover, .obs-card:hover {
-      border-color: #555;
-      transform: scale(1.04);
-    }
-    .brush-card:active, .obs-card:active, .clear-btn:active {
-      transform: scale(0.95);
-    }
-    .brush-card.selected {
-      border-color: #b04040;
-      background: #1a1010;
-      box-shadow: 0 0 12px rgba(176,64,64,0.15);
-    }
-    .brush-card.active, .obs-card.active {
-      border-color: #b04040;
-      background: #1a1010;
-      box-shadow: 0 0 12px rgba(176,64,64,0.15);
-    }
-    .brush-prev, .obs-prev {
-      width: 36px;
-      height: 36px;
-      border-radius: 5px;
-      border: 1px solid #333;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .obs-prev {
-      background: #10101a;
-    }
-    .brush-name, .obs-name {
-      font-size: 10.5px;
-      color: #aaa;
-      text-align: center;
-      line-height: 1.2;
-      max-width: 72px;
-      word-wrap: break-word;
-    }
-    .brush-key, .obs-key, .clear-key {
-      position: absolute;
-      top: 4px;
-      right: 4px;
-      font-size: 9px;
-      color: #666;
-      background: rgba(0,0,0,.4);
-      padding: 1px 4px;
-      border-radius: 2px;
-      line-height: 1;
-    }
-    .clear-btn {
-      border: 2px solid #522222;
-      background: #1a0f0f;
-      color: #e06666;
-    }
-    .clear-btn:hover {
-      border-color: #c04040;
-      color: #ff7777;
-    }
-    .clear-btn .clear-prev {
-      width: 36px;
-      height: 36px;
-      border-radius: 5px;
-      border: 2px dashed #e06666;
-      background: #080808;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      font-weight: 700;
-    }
-    .sep {
-      width: 1px;
-      height: 62px;
-      background: #252525;
-      flex-shrink: 0;
-      margin: 0 6px;
-    }
-    #block-edit {
-      display: none;
-      position: absolute;
-      z-index: 60;
-      background: #1a1a1a;
-      border: 1px solid #b04040;
-      border-radius: 8px;
-      padding: 16px 20px;
-      min-width: 240px;
-      box-shadow: 0 8px 28px rgba(0,0,0,0.75), 0 0 18px rgba(176,64,64,0.15);
-    }
-    #block-edit.show {
-      display: block;
-      animation: popIn .2s ease;
-    }
-    @keyframes popIn {
-      from { opacity: 0; transform: scale(0.9); }
-      to { opacity: 1; transform: scale(1); }
-    }
-    #edit-title {
-      font-size: 13.5px;
-      color: #b04040;
-      margin-bottom: 12px;
-      font-weight: 600;
-    }
-    .ed-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 8px;
-    }
-    .ed-row label {
-      font-size: 12.5px;
-      color: #bbb;
-    }
-    .ed-dir-container {
-      display: grid;
-      grid-template-columns: repeat(4,1fr);
-      gap: 6px;
-      margin: 12px 0;
-    }
-    .ed-dir-btn {
-      width: 42px;
-      height: 42px;
-      border: 2px solid #333;
-      border-radius: 6px;
-      background: #111;
-      color: #c8c8c8;
-      font-size: 22px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: .15s;
-    }
-    .ed-dir-btn.active {
-      border-color: #b04040;
-      background: #2a1010;
-      box-shadow: 0 0 8px rgba(176,64,64,0.4);
-    }
-    .ed-close {
-      position: absolute;
-      top: 8px;
-      right: 12px;
-      cursor: pointer;
-      color: #666;
-      font-size: 20px;
-      line-height: 1;
-      font-weight: 300;
-    }
-    .ed-close:hover {
-      color: #b04040;
-    }
-    .ed-slider {
-      width: 110px;
-      -webkit-appearance: none;
-      appearance: none;
-      height: 4px;
-      background: #2a1a1a;
-      border-radius: 2px;
-      outline: none;
-    }
-    .ed-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: #b04040;
-      cursor: pointer;
-      border: 2px solid #1a1a1a;
-    }
-    #coords {
-      position: absolute;
-      bottom: 8px;
-      right: 12px;
-      font-size: 11px;
-      color: #444;
-      z-index: 5;
-      pointer-events: none;
-      font-variant-numeric: tabular-nums;
-    }
-    #zoom-info {
-      position: absolute;
-      bottom: 8px;
-      left: 12px;
-      font-size: 11px;
-      color: #444;
-      z-index: 5;
-      pointer-events: none;
-    }
-    #pan-hint {
-      position: absolute;
-      top: 12px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 11px;
-      color: #444;
-      z-index: 5;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity .3s;
-    }
-    #pan-hint.show {
-      opacity: 1;
-    }
-    ::-webkit-scrollbar {
-      height: 5px;
-    }
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #2a2a2a;
-      border-radius: 3px;
-    }
-  </style>
-</head>
-<body>
-  <div id="app">
-    <div id="top-panel">
-      <div id="tick-counter">0</div>
-      <div id="speed-wrap">
-        <label id="lbl-speed"></label>
-        <input type="range" id="speed-slider" min="1" max="100" value="12">
-        <span id="speed-val">12 tps</span>
-      </div>
-      <div id="top-right">
-        <button class="btn btn-run" id="btn-run"></button>
-        <button class="btn" id="lang-btn">EN</button>
-      </div>
-    </div>
-    <div id="canvas-wrap">
-      <canvas id="game-canvas"></canvas>
-      <div id="block-edit">
-        <span class="ed-close" id="ed-close">×</span>
-        <h4 id="edit-title"></h4>
-        <div id="edit-body"></div>
-      </div>
-      <div id="coords"></div>
-      <div id="zoom-info"></div>
-      <div id="pan-hint"></div>
-    </div>
-    <div id="bottom-panel"></div>
-  </div>
-
-  <script>
-    "use strict";
-
-    const I18N = {
-      ru: {
-        speed: "Скорость:", start: "Старт", stop: "Стоп",
-        empty: "Пустота", energy: "Энергоблок", button: "Кнопка", delayer: "Задержатель", clear: "Очистить",
-        observer: "Наблюдатель", on: "Вкл", off: "Выкл", pressed: "Нажата", notPressed: "Не нажата",
-        delay: "Задержка", ticks: "тик.", status: "Статус",
-        editEnergy: "Энергоблок", editButton: "Кнопка", editDelayer: "Задержатель", editLamp: "Лампа",
-        separator: "Разделитель", lamp: "Лампа",
-        panHint: "ПКМ / Сред. кнопка — перемещение камеры",
-        clearConfirm: "Очистить всё поле?"
-      },
-      en: {
-        speed: "Speed:", start: "Start", stop: "Stop",
-        empty: "Empty", energy: "Energy", button: "Button", delayer: "Delayer", clear: "Clear",
-        observer: "Observer", on: "On", off: "Off", pressed: "Pressed", notPressed: "Released",
-        delay: "Delay", ticks: "ticks", status: "Status",
-        editEnergy: "Energy Block", editButton: "Button", editDelayer: "Delayer", editLamp: "Lamp",
-        separator: "Separator", lamp: "Lamp",
-        panHint: "RMB / Middle btn — pan camera",
-        clearConfirm: "Clear entire field?"
-      }
-    };
-
-    let lang = "ru";
-    const t = k => I18N[lang][k] || k;
-
-    const GRID = 1000;
-    const BCELL = 20;
-    const ZMIN = 0.5;
-    const ZMAX = 3;
-    const ID_EMPTY = 0;
-    const ID_ENERGY = 1;
-    const ID_BUTTON = 2;
-    const ID_DELAY = 3;
-    const ID_SEPARATOR = 4;
-    const ID_LAMP = 5;
-
-    let wasm = null;
-    let gamePtr = null;
-    const gridId = new Uint8Array(GRID * GRID);
-    const gridSt = new Uint8Array(GRID * GRID);
-    const separatorDir = new Uint8Array(GRID * GRID);
-
-    function gIdx(x, y) { return y * GRID + x; }
-    function getCell(x, y) { const i = gIdx(x, y); return {id: gridId[i], status: gridSt[i]}; }
-    function setCell(x, y, id, st) { const i = gIdx(x, y); gridId[i] = id; gridSt[i] = st; }
-
-    let cam = { x: 500, y: 500, zoom: 1 };
-    const BRUSHES = [
-      {id: 0, st: 0, key: "empty", hotkey: "1"},
-      {id: 1, st: 10, key: "energy", hotkey: "2"},
-      {id: 2, st: 0, key: "button", hotkey: "3"},
-      {id: 3, st: 1, key: "delayer", hotkey: "4"},
-      {id: 4, st: 0, key: "separator", hotkey: "5"},
-      {id: 5, st: 0, key: "lamp", hotkey: "6"}
-    ];
-
-    let selBrush = 1;
-    let obsMode = false;
-    let lastEnergyDir = 10;
-    let running = false;
-    let tickTimer = null;
-    let tps = 12;
-    let curTick = 0;
-
-    let panning = false;
-    let panBtn = -1;
-    let panPrev = {x: 0, y: 0};
-    let drawing = false;
-    let drawStart = null;
-    let drawMoved = false;
-    let ctrlKey = false;
-    let lineOrigin = null;
-    let hoverGx = -1, hoverGy = -1;
-
-    async function loadWasm() {
-      try {
-        const r = await fetch("game.wasm");
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        const buf = await r.arrayBuffer();
-        const {instance} = await WebAssembly.instantiate(buf, {env: {}});
-        wasm = instance.exports;
-        initWasmGame();
-      } catch (e) {
-        console.warn("[WASM] game.wasm not available — UI-only mode.", e.message);
-      }
-    }
-
-    function initWasmGame() {
-      if (!wasm) return;
-      if (gamePtr) wasm.GameStop(gamePtr);
-      gamePtr = wasm.GameInit();
-      pushGridToWasm();
-    }
-
-    function pushGridToWasm() {
-      if (!wasm || !gamePtr) return;
-      for (let y = 0; y < GRID; y++) {
-        for (let x = 0; x < GRID; x++) {
-          const i = gIdx(x, y);
-          if (gridId[i] !== 0) {
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>DerEnots</title>
+        <style>
+            *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            }
+            html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0d0d0d;
+            color: #c8c8c8;
+            user-select: none;
+            }
+            #app {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            }
+            #top-panel {
+            height: 50px;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            background: linear-gradient(180deg, #161616, #111);
+            border-bottom: 1px solid #2a1a1a;
+            z-index: 20;
+            flex-shrink: 0;
+            }
+            #tick-counter {
+            font-size: 20px;
+            font-weight: 700;
+            color: #b04040;
+            min-width: 160px;
+            letter-spacing: 0.5px;
+            font-variant-numeric: tabular-nums;
+            }
+            #speed-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            }
+            #speed-wrap label {
+            font-size: 13px;
+            color: #888;
+            }
+            #speed-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 200px;
+            height: 5px;
+            border-radius: 3px;
+            background: #2a1a1a;
+            outline: none;
+            cursor: pointer;
+            }
+            #speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #b04040;
+            cursor: pointer;
+            border: 2px solid #222;
+            box-shadow: 0 0 6px rgba(176,64,64,0.4);
+            }
+            #speed-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #b04040;
+            cursor: pointer;
+            border: 2px solid #222;
+            }
+            #speed-val {
+            font-size: 13px;
+            color: #b04040;
+            min-width: 52px;
+            text-align: center;
+            font-weight: 600;
+            }
+            #top-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            }
+            .btn {
+            padding: 7px 20px;
+            border: 1px solid #2a2a2a;
+            border-radius: 5px;
+            background: #1c1c1c;
+            color: #c8c8c8;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all .15s ease;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            }
+            .btn:hover {
+            background: #282828;
+            border-color: #b04040;
+            }
+            .btn:active {
+            transform: scale(0.96);
+            }
+            .btn-run {
+            min-width: 100px;
+            }
+            .btn-run.running {
+            background: #b04040;
+            color: #fff;
+            border-color: #c05050;
+            box-shadow: 0 0 10px rgba(176,64,64,0.3);
+            }
+            #lang-btn {
+            padding: 7px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            }
+            #canvas-wrap {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: #080808;
+            cursor: crosshair;
+            }
+            #game-canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            image-rendering: pixelated;
+            }
+            #bottom-panel {
+            height: 15%;
+            min-height: 110px;
+            max-height: 145px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: linear-gradient(0deg, #161616, #111);
+            border-top: 1px solid #2a1a1a;
+            z-index: 20;
+            flex-shrink: 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+            }
+            .brush-card, .obs-card, .clear-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 82px;
+            min-width: 82px;
+            height: 82px;
+            border: 2px solid #252525;
+            border-radius: 8px;
+            background: #161616;
+            cursor: pointer;
+            transition: all .15s ease;
+            gap: 4px;
+            position: relative;
+            }
+            .brush-card:hover, .obs-card:hover {
+            border-color: #555;
+            transform: scale(1.04);
+            }
+            .brush-card:active, .obs-card:active, .clear-btn:active {
+            transform: scale(0.95);
+            }
+            .brush-card.selected {
+            border-color: #b04040;
+            background: #1a1010;
+            box-shadow: 0 0 12px rgba(176,64,64,0.15);
+            }
+            .brush-card.active, .obs-card.active {
+            border-color: #b04040;
+            background: #1a1010;
+            box-shadow: 0 0 12px rgba(176,64,64,0.15);
+            }
+            .brush-prev, .obs-prev {
+            width: 36px;
+            height: 36px;
+            border-radius: 5px;
+            border: 1px solid #333;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            }
+            .obs-prev {
+            background: #10101a;
+            }
+            .brush-name, .obs-name {
+            font-size: 10.5px;
+            color: #aaa;
+            text-align: center;
+            line-height: 1.2;
+            max-width: 72px;
+            word-wrap: break-word;
+            }
+            .brush-key, .obs-key, .clear-key {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            font-size: 9px;
+            color: #666;
+            background: rgba(0,0,0,.4);
+            padding: 1px 4px;
+            border-radius: 2px;
+            line-height: 1;
+            }
+            .clear-btn {
+            border: 2px solid #522222;
+            background: #1a0f0f;
+            color: #e06666;
+            }
+            .clear-btn:hover {
+            border-color: #c04040;
+            color: #ff7777;
+            }
+            .clear-btn .clear-prev {
+            width: 36px;
+            height: 36px;
+            border-radius: 5px;
+            border: 2px dashed #e06666;
+            background: #080808;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 700;
+            }
+            .sep {
+            width: 1px;
+            height: 62px;
+            background: #252525;
+            flex-shrink: 0;
+            margin: 0 6px;
+            }
+            #block-edit {
+            display: none;
+            position: absolute;
+            z-index: 60;
+            background: #1a1a1a;
+            border: 1px solid #b04040;
+            border-radius: 8px;
+            padding: 16px 20px;
+            min-width: 240px;
+            box-shadow: 0 8px 28px rgba(0,0,0,0.75), 0 0 18px rgba(176,64,64,0.15);
+            }
+            #block-edit.show {
+            display: block;
+            animation: popIn .2s ease;
+            }
+            @keyframes popIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+            }
+            #edit-title {
+            font-size: 13.5px;
+            color: #b04040;
+            margin-bottom: 12px;
+            font-weight: 600;
+            }
+            .ed-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 8px;
+            }
+            .ed-row label {
+            font-size: 12.5px;
+            color: #bbb;
+            }
+            .ed-dir-container {
+            display: grid;
+            grid-template-columns: repeat(4,1fr);
+            gap: 6px;
+            margin: 12px 0;
+            }
+            .ed-dir-btn {
+            width: 42px;
+            height: 42px;
+            border: 2px solid #333;
+            border-radius: 6px;
+            background: #111;
+            color: #c8c8c8;
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: .15s;
+            }
+            .ed-dir-btn.active {
+            border-color: #b04040;
+            background: #2a1010;
+            box-shadow: 0 0 8px rgba(176,64,64,0.4);
+            }
+            .ed-close {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            cursor: pointer;
+            color: #666;
+            font-size: 20px;
+            line-height: 1;
+            font-weight: 300;
+            }
+            .ed-close:hover {
+            color: #b04040;
+            }
+            .ed-slider {
+            width: 110px;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 4px;
+            background: #2a1a1a;
+            border-radius: 2px;
+            outline: none;
+            }
+            .ed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #b04040;
+            cursor: pointer;
+            border: 2px solid #1a1a1a;
+            }
+            #coords {
+            position: absolute;
+            bottom: 8px;
+            right: 12px;
+            font-size: 11px;
+            color: #444;
+            z-index: 5;
+            pointer-events: none;
+            font-variant-numeric: tabular-nums;
+            }
+            #zoom-info {
+            position: absolute;
+            bottom: 8px;
+            left: 12px;
+            font-size: 11px;
+            color: #444;
+            z-index: 5;
+            pointer-events: none;
+            }
+            #pan-hint {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: #444;
+            z-index: 5;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity .3s;
+            }
+            #pan-hint.show {
+            opacity: 1;
+            }
+            ::-webkit-scrollbar {
+            height: 5px;
+            }
+            ::-webkit-scrollbar-track {
+            background: transparent;
+            }
+            ::-webkit-scrollbar-thumb {
+            background: #2a2a2a;
+            border-radius: 3px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="app">
+            <div id="top-panel">
+                <div id="tick-counter">0</div>
+                <div id="speed-wrap">
+                    <label id="lbl-speed"></label>
+                    <input type="range" id="speed-slider" min="1" max="100" value="12">
+                    <span id="speed-val">12 tps</span>
+                </div>
+                <div id="top-right">
+                    <button class="btn btn-run" id="btn-run"></button>
+                    <button class="btn" id="lang-btn">RU</button>
+                </div>
+            </div>
+            <div id="canvas-wrap">
+                <canvas id="game-canvas"></canvas>
+                <div id="block-edit">
+                    <span class="ed-close" id="ed-close">×</span>
+                    <h4 id="edit-title"></h4>
+                    <div id="edit-body"></div>
+                </div>
+                <div id="coords"></div>
+                <div id="zoom-info"></div>
+                <div id="pan-hint"></div>
+            </div>
+            <div id="bottom-panel"></div>
+        </div>
+        <script>
+            "use strict";
+            const I18N = {
+            ru: {
+            speed: "Скорость:", start: "Старт", stop: "Стоп",
+            empty: "Пустота", energy: "Энергоблок", button: "Кнопка", delayer: "Задержатель", clear: "Очистить",
+            observer: "Наблюдатель", on: "Вкл", off: "Выкл", pressed: "Нажата", notPressed: "Не нажата",
+            delay: "Задержка", ticks: "тик.", status: "Статус",
+            editEnergy: "Энергоблок", editButton: "Кнопка", editDelayer: "Задержатель", editLamp: "Лампа",
+            separator: "Разделитель", lamp: "Лампа",
+            panHint: "ПКМ / Сред. кнопка — перемещение камеры",
+            clearConfirm: "Очистить всё поле?"
+                  },
+            en: {
+            speed: "Speed:", start: "Start", stop: "Stop",
+            empty: "Empty", energy: "Energy", button: "Button", delayer: "Delayer", clear: "Clear",
+            observer: "Observer", on: "On", off: "Off", pressed: "Pressed", notPressed: "Released",
+            delay: "Delay", ticks: "ticks", status: "Status",
+            editEnergy: "Energy Block", editButton: "Button", editDelayer: "Delayer", editLamp: "Lamp",
+            separator: "Separator", lamp: "Lamp",
+            panHint: "RMB / Middle btn — pan camera",
+            clearConfirm: "Clear entire field?"
+                  }
+                };
+            let lang = "en";
+            const t = k => I18N[lang][k] || k;
+            const GRID = 1000;
+            const BCELL = 20;
+            const ZMIN = 0.5;
+            const ZMAX = 3;
+            const ID_EMPTY = 0;
+            const ID_ENERGY = 1;
+            const ID_BUTTON = 2;
+            const ID_DELAY = 3;
+            const ID_SEPARATOR = 4;
+            const ID_LAMP = 5;
+            let wasm = null;
+            let gamePtr = null;
+            const gridId = new Uint8Array(GRID * GRID);
+            const gridSt = new Uint8Array(GRID * GRID);
+            const separatorDir = new Uint8Array(GRID * GRID);
+            function gIdx(x, y) { return y * GRID + x; }
+            function getCell(x, y) { const i = gIdx(x, y); return {id: gridId[i], status: gridSt[i]}; }
+            function setCell(x, y, id, st) { const i = gIdx(x, y); gridId[i] = id; gridSt[i] = st; }
+            let cam = { x: 500, y: 500, zoom: 1 };
+            const BRUSHES = [
+                  {id: 0, st: 0, key: "empty", hotkey: "1"},
+                  {id: 1, st: 10, key: "energy", hotkey: "2"},
+                  {id: 2, st: 0, key: "button", hotkey: "3"},
+                  {id: 3, st: 1, key: "delayer", hotkey: "4"},
+                  {id: 4, st: 0, key: "separator", hotkey: "5"},
+                  {id: 5, st: 0, key: "lamp", hotkey: "6"}
+                ];
+            let selBrush = 1;
+            let obsMode = false;
+            let lastEnergyDir = 10;
+            let running = false;
+            let tickTimer = null;
+            let tps = 12;
+            let curTick = 0;
+            let panning = false;
+            let panBtn = -1;
+            let panPrev = {x: 0, y: 0};
+            let drawing = false;
+            let drawStart = null;
+            let drawMoved = false;
+            let ctrlKey = false;
+            let lineOrigin = null;
+            let hoverGx = -1, hoverGy = -1;
+            async function loadWasm() {
+            try {
+            const r = await fetch("game.wasm");
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            const buf = await r.arrayBuffer();
+            const {instance} = await WebAssembly.instantiate(buf, {env: {}});
+            wasm = instance.exports;
+            initWasmGame();
+                  } catch (e) {
+            console.warn("[WASM] game.wasm not available — UI-only mode.", e.message);
+                  }
+                }
+            function initWasmGame() {
+            if (!wasm) return;
+            if (gamePtr) wasm.GameStop(gamePtr);
+            gamePtr = wasm.GameInit();
+            pushGridToWasm();
+                }
+            function pushGridToWasm() {
+            if (!wasm || !gamePtr) return;
+            for (let y = 0; y < GRID; y++) {
+            for (let x = 0; x < GRID; x++) {
+            const i = gIdx(x, y);
+            if (gridId[i] !== 0) {
             wasm.GameUpdate(gamePtr, x, y, gridId[i], gridSt[i]);
-          }
-        }
-      }
-    }
-
-    function wasmUpdate(x, y, id, st) {
-      if (!wasm || !gamePtr) return;
-      wasm.GameUpdate(gamePtr, x, y, id, st);
-    }
-
-    function wasmTick() {
-      if (!wasm || !gamePtr) return;
-      try {
-        const ptr = wasm.GameTick(gamePtr);
-        const len = wasm.getArrayLen();
-        const bsz = wasm.getNewTickBlockSize();
-        curTick = wasm.getNumTick();
-        if (len > 0 && ptr) {
-          const dv = new DataView(wasm.memory.buffer, ptr, len * bsz);
-          for (let i = 0; i < len; i++) {
+                      }
+                    }
+                  }
+                }
+            function wasmUpdate(x, y, id, st) {
+            if (!wasm || !gamePtr) return;
+            wasm.GameUpdate(gamePtr, x, y, id, st);
+                }
+            function wasmTick() {
+            if (!wasm || !gamePtr) return;
+            try {
+            const ptr = wasm.GameTick(gamePtr);
+            const len = wasm.getArrayLen();
+            const bsz = wasm.getNewTickBlockSize();
+            curTick = wasm.getNumTick();
+            if (len > 0 && ptr) {
+            const dv = new DataView(wasm.memory.buffer, ptr, len * bsz);
+            for (let i = 0; i < len; i++) {
             const o = i * bsz;
             const cx = dv.getUint32(o, true);
             const cy = dv.getUint32(o + 4, true);
             const ns = dv.getUint8(o + 8);
             if (cx >= 0 && cx < GRID && cy >= 0 && cy < GRID) {
-              gridSt[gIdx(cx, cy)] = ns;
-            }
-          }
-          wasm.freeArray();
-        }
-      } catch (err) {
-        console.error("[WASM] Error in GameTick:", err);
-      }
-      document.getElementById("tick-counter").textContent = curTick.toLocaleString("ru-RU");
-      render();
-    }
-
-    function wasmStop() {
-      if (!wasm || !gamePtr) return;
-      wasm.GameStop(gamePtr);
-      gamePtr = null;
-    }
-
-    function getAutoDir(gx, gy) {
-      const neighbors = [
-        {dx: -1, dy: 0, dir: 40},
-        {dx: 1, dy: 0, dir: 20},
-        {dx: 0, dy: -1, dir: 30},
-        {dx: 0, dy: 1, dir: 10}
-      ];
-      for (let n of neighbors) {
-        const nx = gx + n.dx;
-        const ny = gy + n.dy;
-        if (nx >= 0 && nx < GRID && ny >= 0 && ny < GRID && getCell(nx, ny).id !== ID_EMPTY) {
-          return n.dir;
-        }
-      }
-      return 10;
-    }
-
-    function getRemainingTime(gx, gy) {
-      if (!wasm || !gamePtr) return gridSt[gIdx(gx, gy)] || 0;
-      try {
-        return wasm.getTimeDalye(gamePtr, gx, gy);
-      } catch (e) {
-        return gridSt[gIdx(gx, gy)] || 0;
-      }
-    }
-
-    const cvs = document.getElementById("game-canvas");
-    const ctx = cvs.getContext("2d");
-    const wrap = document.getElementById("canvas-wrap");
-
-    function resize() {
-      cvs.width = wrap.clientWidth;
-      cvs.height = wrap.clientHeight;
-      render();
-    }
-    window.addEventListener("resize", resize);
-
-    function cellPx() { return BCELL * cam.zoom; }
-    function camOffset() {
-      const cs = cellPx();
-      return { x: cam.x * cs - cvs.width / 2, y: cam.y * cs - cvs.height / 2 };
-    }
-    function visibleRange() {
-      const cs = cellPx();
-      const o = camOffset();
-      return {
-        x0: Math.max(0, Math.floor(o.x / cs)),
-        y0: Math.max(0, Math.floor(o.y / cs)),
-        x1: Math.min(GRID, Math.ceil((o.x + cvs.width) / cs)),
-        y1: Math.min(GRID, Math.ceil((o.y + cvs.height) / cs))
-      };
-    }
-
-    function render() {
-      const W = cvs.width;
-      const H = cvs.height;
-      if (!W || !H) return;
-      const cs = cellPx();
-      const o = camOffset();
-      const v = visibleRange();
-      ctx.fillStyle = "#080808";
-      ctx.fillRect(0, 0, W, H);
-      const pad = Math.max(0.5, cs * 0.07);
-      const inner = cs - pad * 2;
-
-      for (let gy = v.y0; gy < v.y1; gy++) {
-        for (let gx = v.x0; gx < v.x1; gx++) {
-          const px = gx * cs - o.x;
-          const py = gy * cs - o.y;
-          const i = gIdx(gx, gy);
-          renderCell(px, py, cs, pad, inner, gx, gy, gridId[i], gridSt[i]);
-        }
-      }
-
-      if (cs >= 8) {
-        ctx.strokeStyle = cs >= 16 ? "rgba(55,55,55,0.85)" : "rgba(40,40,40,0.6)";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        const x0scr = v.x0 * cs - o.x;
-        const x1scr = v.x1 * cs - o.x;
-        const y0scr = v.y0 * cs - o.y;
-        const y1scr = v.y1 * cs - o.y;
-        for (let gx = v.x0; gx <= v.x1; gx++) {
-          const sx = Math.round(gx * cs - o.x) + 0.5;
-          ctx.moveTo(sx, y0scr);
-          ctx.lineTo(sx, y1scr);
-        }
-        for (let gy = v.y0; gy <= v.y1; gy++) {
-          const sy = Math.round(gy * cs - o.y) + 0.5;
-          ctx.moveTo(x0scr, sy);
-          ctx.lineTo(x1scr, sy);
-        }
-        ctx.stroke();
-      }
-
-      if (hoverGx >= 0 && hoverGy >= 0) {
-        const hpx = hoverGx * cs - o.x;
-        const hpy = hoverGy * cs - o.y;
-        ctx.save();
-        ctx.strokeStyle = "rgba(176,64,64,0.6)";
-        ctx.lineWidth = 2.5;
-        ctx.strokeRect(hpx + 1, hpy + 1, cs - 2, cs - 2);
-        ctx.restore();
-      }
-
-      if (ctrlKey && drawing && lineOrigin) {
-        const sx = lineOrigin.x * cs - o.x + cs / 2;
-        const sy = lineOrigin.y * cs - o.y + cs / 2;
-        const ex = hoverGx * cs - o.x + cs / 2;
-        const ey = hoverGy * cs - o.y + cs / 2;
-        ctx.save();
-        ctx.strokeStyle = "rgba(176,64,64,0.55)";
-        ctx.lineWidth = 2;
-        ctx.setLineDash([6, 4]);
-        ctx.beginPath();
-        ctx.moveTo(sx, sy);
-        ctx.lineTo(ex, ey);
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      document.getElementById("zoom-info").textContent = `×${cam.zoom.toFixed(1)}`;
-    }
-
-    function renderCell(px, py, cs, pad, inner, gx, gy, id, st) {
-      switch (id) {
-        case ID_EMPTY:
-          ctx.fillStyle = "#131313";
-          ctx.fillRect(px + pad, py + pad, inner, inner);
-          break;
-        case ID_ENERGY: {
-          const dirCode = Math.floor(st / 10) || 1;
-          const isOn = (st % 10) === 1;
-          if (isOn) {
+            gridSt[gIdx(cx, cy)] = ns;
+                        }
+                      }
+            wasm.freeArray();
+                    }
+                  } catch (err) {
+            console.error("[WASM] Error in GameTick:", err);
+                  }
+            document.getElementById("tick-counter").textContent = curTick.toLocaleString("ru-RU");
+            render();
+                }
+            function wasmStop() {
+            if (!wasm || !gamePtr) return;
+            wasm.GameStop(gamePtr);
+            gamePtr = null;
+                }
+            function getAutoDir(gx, gy) {
+            const neighbors = [
+                    {dx: -1, dy: 0, dir: 40},
+                    {dx: 1, dy: 0, dir: 20},
+                    {dx: 0, dy: -1, dir: 30},
+                    {dx: 0, dy: 1, dir: 10}
+                  ];
+            for (let n of neighbors) {
+            const nx = gx + n.dx;
+            const ny = gy + n.dy;
+            if (nx >= 0 && nx < GRID && ny >= 0 && ny < GRID && getCell(nx, ny).id !== ID_EMPTY) {
+            return n.dir;
+                    }
+                  }
+            return 10;
+                }
+            function getRemainingTime(gx, gy) {
+            if (!wasm || !gamePtr) return gridSt[gIdx(gx, gy)] || 0;
+            try {
+            return wasm.getTimeDalye(gamePtr, gx, gy);
+                  } catch (e) {
+            return gridSt[gIdx(gx, gy)] || 0;
+                  }
+                }
+            const cvs = document.getElementById("game-canvas");
+            const ctx = cvs.getContext("2d");
+            const wrap = document.getElementById("canvas-wrap");
+            function resize() {
+            cvs.width = wrap.clientWidth;
+            cvs.height = wrap.clientHeight;
+            render();
+                }
+            window.addEventListener("resize", resize);
+            function cellPx() { return BCELL * cam.zoom; }
+            function camOffset() {
+            const cs = cellPx();
+            return { x: cam.x * cs - cvs.width / 2, y: cam.y * cs - cvs.height / 2 };
+                }
+            function visibleRange() {
+            const cs = cellPx();
+            const o = camOffset();
+            return {
+            x0: Math.max(0, Math.floor(o.x / cs)),
+            y0: Math.max(0, Math.floor(o.y / cs)),
+            x1: Math.min(GRID, Math.ceil((o.x + cvs.width) / cs)),
+            y1: Math.min(GRID, Math.ceil((o.y + cvs.height) / cs))
+                  };
+                }
+            function render() {
+            const W = cvs.width;
+            const H = cvs.height;
+            if (!W || !H) return;
+            const cs = cellPx();
+            const o = camOffset();
+            const v = visibleRange();
+            ctx.fillStyle = "#080808";
+            ctx.fillRect(0, 0, W, H);
+            const pad = Math.max(0.5, cs * 0.07);
+            const inner = cs - pad * 2;
+            for (let gy = v.y0; gy < v.y1; gy++) {
+            for (let gx = v.x0; gx < v.x1; gx++) {
+            const px = gx * cs - o.x;
+            const py = gy * cs - o.y;
+            const i = gIdx(gx, gy);
+            renderCell(px, py, cs, pad, inner, gx, gy, gridId[i], gridSt[i]);
+                    }
+                  }
+            if (cs >= 8) {
+            ctx.strokeStyle = cs >= 16 ? "rgba(55,55,55,0.85)" : "rgba(40,40,40,0.6)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            const x0scr = v.x0 * cs - o.x;
+            const x1scr = v.x1 * cs - o.x;
+            const y0scr = v.y0 * cs - o.y;
+            const y1scr = v.y1 * cs - o.y;
+            for (let gx = v.x0; gx <= v.x1; gx++) {
+            const sx = Math.round(gx * cs - o.x) + 0.5;
+            ctx.moveTo(sx, y0scr);
+            ctx.lineTo(sx, y1scr);
+                    }
+            for (let gy = v.y0; gy <= v.y1; gy++) {
+            const sy = Math.round(gy * cs - o.y) + 0.5;
+            ctx.moveTo(x0scr, sy);
+            ctx.lineTo(x1scr, sy);
+                    }
+            ctx.stroke();
+                  }
+            if (hoverGx >= 0 && hoverGy >= 0) {
+            const hpx = hoverGx * cs - o.x;
+            const hpy = hoverGy * cs - o.y;
+            ctx.save();
+            ctx.strokeStyle = "rgba(176,64,64,0.6)";
+            ctx.lineWidth = 2.5;
+            ctx.strokeRect(hpx + 1, hpy + 1, cs - 2, cs - 2);
+            ctx.restore();
+                  }
+            if (ctrlKey && drawing && lineOrigin) {
+            const sx = lineOrigin.x * cs - o.x + cs / 2;
+            const sy = lineOrigin.y * cs - o.y + cs / 2;
+            const ex = hoverGx * cs - o.x + cs / 2;
+            const ey = hoverGy * cs - o.y + cs / 2;
+            ctx.save();
+            ctx.strokeStyle = "rgba(176,64,64,0.55)";
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 4]);
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(ex, ey);
+            ctx.stroke();
+            ctx.restore();
+                  }
+            document.getElementById("zoom-info").textContent = `×${cam.zoom.toFixed(1)}`;
+                }
+            function renderCell(px, py, cs, pad, inner, gx, gy, id, st) {
+            switch (id) {
+            case ID_EMPTY:
+            ctx.fillStyle = "#131313";
+            ctx.fillRect(px + pad, py + pad, inner, inner);
+            break;
+            case ID_ENERGY: {
+            const dirCode = Math.floor(st / 10) || 1;
+            const isOn = (st % 10) === 1;
+            if (isOn) {
             ctx.save();
             const gr = ctx.createRadialGradient(px + cs / 2, py + cs / 2, inner * 0.08, px + cs / 2, py + cs / 2, inner * 0.65);
             gr.addColorStop(0, "#ff5050");
@@ -709,14 +682,14 @@
             ctx.fillStyle = "rgba(255,80,80,0.25)";
             ctx.fillRect(px + pad + 1, py + pad + 1, inner - 2, inner - 2);
             ctx.restore();
-          } else {
+                      } else {
             ctx.fillStyle = "#282828";
             ctx.fillRect(px + pad, py + pad, inner, inner);
             ctx.strokeStyle = "#353535";
             ctx.lineWidth = 1;
             ctx.strokeRect(px + pad + 0.5, py + pad + 0.5, inner - 1, inner - 1);
-          }
-          if (cs >= 14) {
+                      }
+            if (cs >= 14) {
             ctx.save();
             ctx.translate(px + cs / 2, py + cs / 2);
             const size = Math.max(8, inner * 0.38);
@@ -726,64 +699,64 @@
             ctx.lineJoin = "round";
             ctx.beginPath();
             if (dirCode === 1) {
-              ctx.moveTo(0, size * 0.7);
-              ctx.lineTo(0, -size * 0.85);
-              ctx.moveTo(-size * 0.55, -size * 0.25);
-              ctx.lineTo(0, -size * 0.85);
-              ctx.lineTo(size * 0.55, -size * 0.25);
-            } else if (dirCode === 2) {
-              ctx.moveTo(size * 0.7, 0);
-              ctx.lineTo(-size * 0.85, 0);
-              ctx.moveTo(-size * 0.25, -size * 0.55);
-              ctx.lineTo(-size * 0.85, 0);
-              ctx.lineTo(-size * 0.25, size * 0.55);
-            } else if (dirCode === 3) {
-              ctx.moveTo(0, -size * 0.7);
-              ctx.lineTo(0, size * 0.85);
-              ctx.moveTo(-size * 0.55, size * 0.25);
-              ctx.lineTo(0, size * 0.85);
-              ctx.lineTo(size * 0.55, size * 0.25);
-            } else if (dirCode === 4) {
-              ctx.moveTo(-size * 0.7, 0);
-              ctx.lineTo(size * 0.85, 0);
-              ctx.moveTo(size * 0.25, -size * 0.55);
-              ctx.lineTo(size * 0.85, 0);
-              ctx.lineTo(size * 0.25, size * 0.55);
-            }
+            ctx.moveTo(0, size * 0.7);
+            ctx.lineTo(0, -size * 0.85);
+            ctx.moveTo(-size * 0.55, -size * 0.25);
+            ctx.lineTo(0, -size * 0.85);
+            ctx.lineTo(size * 0.55, -size * 0.25);
+                        } else if (dirCode === 2) {
+            ctx.moveTo(size * 0.7, 0);
+            ctx.lineTo(-size * 0.85, 0);
+            ctx.moveTo(-size * 0.25, -size * 0.55);
+            ctx.lineTo(-size * 0.85, 0);
+            ctx.lineTo(-size * 0.25, size * 0.55);
+                        } else if (dirCode === 3) {
+            ctx.moveTo(0, -size * 0.7);
+            ctx.lineTo(0, size * 0.85);
+            ctx.moveTo(-size * 0.55, size * 0.25);
+            ctx.lineTo(0, size * 0.85);
+            ctx.lineTo(size * 0.55, size * 0.25);
+                        } else if (dirCode === 4) {
+            ctx.moveTo(-size * 0.7, 0);
+            ctx.lineTo(size * 0.85, 0);
+            ctx.moveTo(size * 0.25, -size * 0.55);
+            ctx.lineTo(size * 0.85, 0);
+            ctx.lineTo(size * 0.25, size * 0.55);
+                        }
             ctx.stroke();
             ctx.restore();
-          }
-          break;
-        }
-        case ID_BUTTON: {
-          const base = (st % 10 === 1) ? "#803030" : "#1c1c1c";
-          ctx.fillStyle = base;
-          ctx.fillRect(px + pad, py + pad, inner, inner);
-          const hp = inner * 0.18;
-          ctx.fillStyle = (st % 10 === 1) ? "#a04545" : "#2a2a2a";
-          ctx.fillRect(px + pad, py + pad, inner, hp);
-          ctx.fillRect(px + pad, py + pad, hp, inner);
-          ctx.fillStyle = "rgba(0,0,0,0.35)";
-          ctx.fillRect(px + pad + inner - hp, py + pad, hp, inner);
-          ctx.fillRect(px + pad, py + pad + inner - hp, inner, hp);
-          break;
-        }
-        case ID_DELAY:
-          ctx.fillStyle = "#10101a";
-          ctx.fillRect(px + pad, py + pad, inner, inner);
-          if (cs >= 10) {
+                      }
+            break;
+                    }
+            case ID_BUTTON: {
+            const base = (st % 10 === 1) ? "#803030" : "#1c1c1c";
+            ctx.fillStyle = base;
+            ctx.fillRect(px + pad, py + pad, inner, inner);
+            const hp = inner * 0.18;
+            ctx.fillStyle = (st % 10 === 1) ? "#a04545" : "#2a2a2a";
+            ctx.fillRect(px + pad, py + pad, inner, hp);
+            ctx.fillRect(px + pad, py + pad, hp, inner);
+            ctx.fillStyle = "rgba(0,0,0,0.35)";
+            ctx.fillRect(px + pad + inner - hp, py + pad, hp, inner);
+            ctx.fillRect(px + pad, py + pad + inner - hp, inner, hp);
+            break;
+                    }
+            case ID_DELAY:
+            ctx.fillStyle = "#10101a";
+            ctx.fillRect(px + pad, py + pad, inner, inner);
+            if (cs >= 10) {
             ctx.fillStyle = "#b04040";
             const fs = Math.max(7, inner * 0.48);
             ctx.font = `bold ${fs}px sans-serif`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.fillText(String(getRemainingTime(gx, gy)), px + cs / 2, py + cs / 2 + 1);
-          }
-          break;
-        case ID_SEPARATOR: {
-          const isOn = st !== 0;
-          let dirCode = separatorDir[gIdx(gx, gy)] || getAutoDir(gx, gy);
-          if (isOn) {
+                      }
+            break;
+            case ID_SEPARATOR: {
+            const isOn = st !== 0;
+            let dirCode = separatorDir[gIdx(gx, gy)] || getAutoDir(gx, gy);
+            if (isOn) {
             ctx.save();
             const gr = ctx.createRadialGradient(px + cs / 2, py + cs / 2, inner * 0.08, px + cs / 2, py + cs / 2, inner * 0.65);
             gr.addColorStop(0, "#ff5050");
@@ -796,14 +769,14 @@
             ctx.fillStyle = "rgba(255,80,80,0.25)";
             ctx.fillRect(px + pad + 1, py + pad + 1, inner - 2, inner - 2);
             ctx.restore();
-          } else {
+                      } else {
             ctx.fillStyle = "#282828";
             ctx.fillRect(px + pad, py + pad, inner, inner);
             ctx.strokeStyle = "#353535";
             ctx.lineWidth = 1;
             ctx.strokeRect(px + pad + 0.5, py + pad + 0.5, inner - 1, inner - 1);
-          }
-          if (cs >= 14) {
+                      }
+            if (cs >= 14) {
             ctx.save();
             ctx.translate(px + cs / 2, py + cs / 2);
             const size = Math.max(8, inner * 0.38);
@@ -812,36 +785,36 @@
             ctx.lineCap = "round";
             ctx.lineJoin = "round";
             const drawArrow = (dCode) => {
-              ctx.save();
-              ctx.beginPath();
-              if (dCode === 10) {
-                ctx.moveTo(0, size * 0.7);
-                ctx.lineTo(0, -size * 0.85);
-                ctx.moveTo(-size * 0.55, -size * 0.25);
-                ctx.lineTo(0, -size * 0.85);
-                ctx.lineTo(size * 0.55, -size * 0.25);
-              } else if (dCode === 20) {
-                ctx.moveTo(size * 0.7, 0);
-                ctx.lineTo(-size * 0.85, 0);
-                ctx.moveTo(-size * 0.25, -size * 0.55);
-                ctx.lineTo(-size * 0.85, 0);
-                ctx.lineTo(-size * 0.25, size * 0.55);
-              } else if (dCode === 30) {
-                ctx.moveTo(0, -size * 0.7);
-                ctx.lineTo(0, size * 0.85);
-                ctx.moveTo(-size * 0.55, size * 0.25);
-                ctx.lineTo(0, size * 0.85);
-                ctx.lineTo(size * 0.55, size * 0.25);
-              } else if (dCode === 40) {
-                ctx.moveTo(-size * 0.7, 0);
-                ctx.lineTo(size * 0.85, 0);
-                ctx.moveTo(size * 0.25, -size * 0.55);
-                ctx.lineTo(size * 0.85, 0);
-                ctx.lineTo(size * 0.25, size * 0.55);
-              }
-              ctx.stroke();
-              ctx.restore();
-            };
+            ctx.save();
+            ctx.beginPath();
+            if (dCode === 10) {
+            ctx.moveTo(0, size * 0.7);
+            ctx.lineTo(0, -size * 0.85);
+            ctx.moveTo(-size * 0.55, -size * 0.25);
+            ctx.lineTo(0, -size * 0.85);
+            ctx.lineTo(size * 0.55, -size * 0.25);
+                          } else if (dCode === 20) {
+            ctx.moveTo(size * 0.7, 0);
+            ctx.lineTo(-size * 0.85, 0);
+            ctx.moveTo(-size * 0.25, -size * 0.55);
+            ctx.lineTo(-size * 0.85, 0);
+            ctx.lineTo(-size * 0.25, size * 0.55);
+                          } else if (dCode === 30) {
+            ctx.moveTo(0, -size * 0.7);
+            ctx.lineTo(0, size * 0.85);
+            ctx.moveTo(-size * 0.55, size * 0.25);
+            ctx.lineTo(0, size * 0.85);
+            ctx.lineTo(size * 0.55, size * 0.25);
+                          } else if (dCode === 40) {
+            ctx.moveTo(-size * 0.7, 0);
+            ctx.lineTo(size * 0.85, 0);
+            ctx.moveTo(size * 0.25, -size * 0.55);
+            ctx.lineTo(size * 0.85, 0);
+            ctx.lineTo(size * 0.25, size * 0.55);
+                          }
+            ctx.stroke();
+            ctx.restore();
+                        };
             drawArrow(dirCode);
             let leftDir = 20, rightDir = 40;
             if (dirCode === 10) { leftDir = 20; rightDir = 40; }
@@ -851,12 +824,12 @@
             drawArrow(leftDir);
             drawArrow(rightDir);
             ctx.restore();
-          }
-          break;
-        }
-        case ID_LAMP: {
-          const isOn = st === 1;
-          if (isOn) {
+                      }
+            break;
+                    }
+            case ID_LAMP: {
+            const isOn = st === 1;
+            if (isOn) {
             ctx.save();
             const gr = ctx.createRadialGradient(px + cs / 2, py + cs / 2, inner * 0.1, px + cs / 2, py + cs / 2, inner * 0.75);
             gr.addColorStop(0, "#ff7070");
@@ -869,498 +842,501 @@
             ctx.fillStyle = "rgba(255,120,120,0.35)";
             ctx.fillRect(px + pad + 2, py + pad + 2, inner - 4, inner - 4);
             ctx.restore();
-          } else {
+                      } else {
             ctx.fillStyle = "#222222";
             ctx.fillRect(px + pad, py + pad, inner, inner);
             ctx.strokeStyle = "#3a3a3a";
             ctx.lineWidth = 1.5;
             ctx.strokeRect(px + pad + 0.5, py + pad + 0.5, inner - 1, inner - 1);
-          }
-          break;
-        }
-      }
-    }
-
-    wrap.addEventListener("contextmenu", e => e.preventDefault());
-
-    let editEl = document.getElementById("block-edit");
-
-    function openEdit(gx, gy, mx, my) {
-      const c = getCell(gx, gy);
-      if (c.id === 0 || c.id === ID_SEPARATOR) return;
-      const titleEl = document.getElementById("edit-title");
-      const bodyEl = document.getElementById("edit-body");
-      bodyEl.innerHTML = "";
-      if (c.id === ID_ENERGY) {
-        titleEl.textContent = t("editEnergy");
-        const dir = Math.floor(c.status / 10) * 10 || 10;
-        const isOnNow = (c.status % 10) === 1;
-        addToggleRow(bodyEl, t("status"), isOnNow, v => {
-          const ns = dir + (v ? 1 : 0);
-          setCell(gx, gy, c.id, ns);
-          wasmUpdate(gx, gy, c.id, ns);
-          render();
-          openEdit(gx, gy, mx, my);
-        }, () => isOnNow ? t("on") : t("off"));
-        const dirRow = document.createElement("div");
-        dirRow.style.marginTop = "14px";
-        dirRow.innerHTML = `<div style="font-size:12.5px;color:#bbb;margin-bottom:8px">Направление:</div>`;
-        const container = document.createElement("div");
-        container.style.display = "grid";
-        container.style.gridTemplateColumns = "repeat(4,1fr)";
-        container.style.gap = "6px";
-        [{code:10,sym:"↑"},{code:20,sym:"←"},{code:30,sym:"↓"},{code:40,sym:"→"}].forEach(d => {
-          const btn = document.createElement("button");
-          btn.className = "ed-dir-btn" + (dir === d.code ? " active" : "");
-          btn.textContent = d.sym;
-          btn.onclick = () => {
+                      }
+            break;
+                    }
+                  }
+                }
+            wrap.addEventListener("contextmenu", e => e.preventDefault());
+            let editEl = document.getElementById("block-edit");
+            function openEdit(gx, gy, mx, my) {
+            const c = getCell(gx, gy);
+            if (c.id === 0 || c.id === ID_SEPARATOR) return;
+            const titleEl = document.getElementById("edit-title");
+            const bodyEl = document.getElementById("edit-body");
+            bodyEl.innerHTML = "";
+            if (c.id === ID_ENERGY) {
+            titleEl.textContent = t("editEnergy");
+            const dir = Math.floor(c.status / 10) * 10 || 10;
+            const isOnNow = (c.status % 10) === 1;
+            addToggleRow(bodyEl, t("status"), isOnNow, v => {
+            const ns = dir + (v ? 1 : 0);
+            setCell(gx, gy, c.id, ns);
+            wasmUpdate(gx, gy, c.id, ns);
+            render();
+            openEdit(gx, gy, mx, my);
+                    }, () => isOnNow ? t("on") : t("off"));
+            const dirRow = document.createElement("div");
+            dirRow.style.marginTop = "14px";
+            dirRow.innerHTML = `<div style="font-size:12.5px;color:#bbb;margin-bottom:8px">Direction:</div>`;
+            const container = document.createElement("div");
+            container.style.display = "grid";
+            container.style.gridTemplateColumns = "repeat(4,1fr)";
+            container.style.gap = "6px";
+                    [{code:10,sym:"↑"},{code:20,sym:"←"},{code:30,sym:"↓"},{code:40,sym:"→"}].forEach(d => {
+            const btn = document.createElement("button");
+            btn.className = "ed-dir-btn" + (dir === d.code ? " active" : "");
+            btn.textContent = d.sym;
+            btn.onclick = () => {
             lastEnergyDir = d.code;
             const newSt = d.code + (isOnNow ? 1 : 0);
             setCell(gx, gy, c.id, newSt);
             wasmUpdate(gx, gy, c.id, newSt);
             render();
             openEdit(gx, gy, mx, my);
-          };
-          container.appendChild(btn);
-        });
-        dirRow.appendChild(container);
-        bodyEl.appendChild(dirRow);
-      } else if (c.id === ID_BUTTON || c.id === ID_LAMP) {
-        titleEl.textContent = c.id === ID_LAMP ? t("editLamp") : t("editButton");
-        addToggleRow(bodyEl, t("status"), c.status === 1, v => {
-          const ns = v ? 1 : 0;
-          setCell(gx, gy, c.id, ns);
-          wasmUpdate(gx, gy, c.id, ns);
-          render();
-        }, () => c.status === 1 ? t("on") : t("off"));
-      } else if (c.id === ID_DELAY) {
-        titleEl.textContent = t("editDelayer");
-        addSliderRow(bodyEl, t("delay"), 1, 255, c.status || 1, v => {
-          setCell(gx, gy, c.id, v);
-          wasmUpdate(gx, gy, c.id, v);
-          render();
-        });
-      }
-      const wr = wrap.getBoundingClientRect();
-      let l = mx - wr.left + 12;
-      let tp = my - wr.top + 12;
-      if (l + 260 > wr.width) l = mx - wr.left - 260;
-      if (tp + 140 > wr.height) tp = my - wr.top - 140;
-      editEl.style.left = l + "px";
-      editEl.style.top = tp + "px";
-      editEl.classList.add("show");
-    }
-
-    function addToggleRow(parent, label, initVal, onChange, textFn) {
-      const row = document.createElement("div");
-      row.className = "ed-row";
-      const lbl = document.createElement("label");
-      lbl.textContent = label + ":";
-      const btn = document.createElement("button");
-      btn.className = "btn" + (initVal ? " active" : "");
-      btn.textContent = textFn();
-      btn.style.minWidth = "78px";
-      btn.onclick = () => {
-        const nv = !btn.classList.contains("active");
-        onChange(nv);
-        btn.classList.toggle("active", nv);
-        btn.textContent = textFn();
-      };
-      row.append(lbl, btn);
-      parent.appendChild(row);
-    }
-
-    function addSliderRow(parent, label, min, max, initVal, onChange) {
-      const row = document.createElement("div");
-      row.className = "ed-row";
-      const lbl = document.createElement("label");
-      lbl.textContent = label + ":";
-      const sl = document.createElement("input");
-      sl.type = "range";
-      sl.className = "ed-slider";
-      sl.min = min;
-      sl.max = max;
-      sl.value = initVal;
-      const vspan = document.createElement("span");
-      vspan.style.cssText = "font-size:12.5px;color:#b04040;min-width:26px;text-align:center;font-weight:600";
-      vspan.textContent = initVal;
-      sl.oninput = () => {
-        vspan.textContent = sl.value;
-        onChange(parseInt(sl.value));
-      };
-      row.append(lbl, sl, vspan);
-      parent.appendChild(row);
-    }
-
-    function closeEdit() {
-      editEl.classList.remove("show");
-    }
-
-    document.getElementById("ed-close").addEventListener("click", closeEdit);
-    document.addEventListener("keydown", e => {
-      if (e.key === "Escape") closeEdit();
-    });
-    editEl.addEventListener("mousedown", e => e.stopPropagation());
-
-    function validG(x, y) {
-      return x >= 0 && x < GRID && y >= 0 && y < GRID;
-    }
-
-    wrap.addEventListener("mousedown", e => {
-      if (e.button === 2 || e.button === 1) {
-        panning = true;
-        panBtn = e.button;
-        panPrev = {x: e.clientX, y: e.clientY};
-        wrap.style.cursor = "grabbing";
-        e.preventDefault();
-        return;
-      }
-      if (e.button !== 0) return;
-      if (editEl.classList.contains("show") && editEl.contains(e.target)) return;
-      closeEdit();
-      const g = screenToGrid(e.clientX, e.clientY);
-      drawStart = {sx: e.clientX, sy: e.clientY, gx: g.x, gy: g.y};
-      drawMoved = false;
-      drawing = true;
-      if (ctrlKey) {
-        lineOrigin = g;
-        return;
-      }
-      if (!obsMode && validG(g.x, g.y)) placeBlock(g.x, g.y);
-    });
-
-    function screenToGrid(sx, sy) {
-      const rect = wrap.getBoundingClientRect();
-      const lx = sx - rect.left;
-      const ly = sy - rect.top;
-      const cs = cellPx();
-      const o = camOffset();
-      return {
-        x: Math.floor((lx + o.x) / cs),
-        y: Math.floor((ly + o.y) / cs)
-      };
-    }
-
-    window.addEventListener("mousemove", e => {
-      if (panning) {
-        const dx = e.clientX - panPrev.x;
-        const dy = e.clientY - panPrev.y;
-        const cs = cellPx();
-        cam.x -= dx / cs;
-        cam.y -= dy / cs;
-        cam.x = Math.max(cvs.width / (2 * cs), Math.min(GRID - cvs.width / (2 * cs), cam.x));
-        cam.y = Math.max(cvs.height / (2 * cs), Math.min(GRID - cvs.height / (2 * cs), cam.y));
-        panPrev = {x: e.clientX, y: e.clientY};
-        render();
-      }
-    });
-
-    window.addEventListener("mouseup", e => {
-      if (panning && e.button === panBtn) {
-        panning = false;
-        panBtn = -1;
-        wrap.style.cursor = "crosshair";
-      }
-    });
-
-    wrap.addEventListener("mousemove", e => {
-      const g = screenToGrid(e.clientX, e.clientY);
-      if (validG(g.x, g.y)) {
-        hoverGx = g.x;
-        hoverGy = g.y;
-        document.getElementById("coords").textContent = `(${g.x}, ${g.y})`;
-      } else {
-        hoverGx = hoverGy = -1;
-      }
-      if (!drawing) {
-        render();
-        return;
-      }
-      if (drawStart) {
-        const d = Math.hypot(e.clientX - drawStart.sx, e.clientY - drawStart.sy);
-        if (d > 3) drawMoved = true;
-      }
-      if (obsMode) {
-        render();
-        return;
-      }
-      if (ctrlKey && lineOrigin) {
-        render();
-        return;
-      }
-      if (drawMoved && validG(g.x, g.y) && !ctrlKey) {
-        placeBlock(g.x, g.y);
-        render();
-      }
-    });
-
-    wrap.addEventListener("mouseup", e => {
-      if (e.button !== 0 || !drawing) return;
-      drawing = false;
-      if (lineOrigin && !obsMode) {
-        const g = screenToGrid(e.clientX, e.clientY);
-        if (validG(g.x, g.y)) bresenham(lineOrigin.x, lineOrigin.y, g.x, g.y);
-        lineOrigin = null;
-      }
-      drawStart = null;
-      drawMoved = false;
-      render();
-    });
-
-    wrap.addEventListener("dblclick", e => {
-      if (e.button !== 0 || obsMode) return;
-      const g = screenToGrid(e.clientX, e.clientY);
-      if (validG(g.x, g.y)) {
-        const c = getCell(g.x, g.y);
-        if (c.id !== 0 && c.id !== ID_SEPARATOR) openEdit(g.x, g.y, e.clientX, e.clientY);
-      }
-    });
-
-    wrap.addEventListener("mouseleave", () => {
-      hoverGx = hoverGy = -1;
-      drawing = false;
-      drawStart = null;
-      drawMoved = false;
-      panning = false;
-      wrap.style.cursor = "crosshair";
-      render();
-    });
-
-    wrap.addEventListener("wheel", e => {
-      e.preventDefault();
-      const d = e.deltaY > 0 ? -0.15 : 0.15;
-      const oldZ = cam.zoom;
-      cam.zoom = Math.max(ZMIN, Math.min(ZMAX, cam.zoom + d));
-      const g = screenToGrid(e.clientX, e.clientY);
-      const f = cam.zoom / oldZ;
-      cam.x = g.x + (cam.x - g.x) / f;
-      cam.y = g.y + (cam.y - g.y) / f;
-      render();
-    }, {passive: false});
-
-    document.addEventListener("keydown", e => {
-      if (e.key === "Control") ctrlKey = true;
-      if (e.key === "1") { selBrush = 0; buildBP(); }
-      if (e.key === "2") { selBrush = 1; buildBP(); }
-      if (e.key === "3") { selBrush = 2; buildBP(); }
-      if (e.key === "4") { selBrush = 3; buildBP(); }
-      if (e.key === "5") { selBrush = 4; buildBP(); }
-      if (e.key === "6") { selBrush = 5; buildBP(); }
-      if (e.key.toLowerCase() === "o") { obsMode = !obsMode; closeEdit(); buildBP(); }
-      if (e.key.toLowerCase() === "c" || e.key === "Delete") { clearAll(); }
-    });
-    document.addEventListener("keyup", e => {
-      if (e.key === "Control") ctrlKey = false;
-    });
-
-    let lastPlaced = null;
-    function placeBlock(gx, gy) {
-      if (!validG(gx, gy) || obsMode) return;
-      if (lastPlaced && lastPlaced.x === gx && lastPlaced.y === gy) return;
-      let b = {...BRUSHES[selBrush]};
-      if (b.id === ID_ENERGY) b.st = lastEnergyDir;
-      else if (b.id === ID_SEPARATOR) {
-        const dir = getAutoDir(gx, gy);
-        separatorDir[gIdx(gx, gy)] = dir;
-        b.st = 0;
-      }
-      setCell(gx, gy, b.id, b.st);
-      wasmUpdate(gx, gy, b.id, b.st);
-      lastPlaced = {x: gx, y: gy};
-      requestAnimationFrame(() => { lastPlaced = null; });
-      render();
-    }
-
-    function bresenham(x0, y0, x1, y1) {
-      const dx = Math.abs(x1 - x0);
-      const dy = Math.abs(y1 - y0);
-      const sx = x0 < x1 ? 1 : -1;
-      const sy = y0 < y1 ? 1 : -1;
-      let err = dx - dy;
-      let cx = x0;
-      let cy = y0;
-      for (;;) {
-        if (validG(cx, cy)) {
-          let b = {...BRUSHES[selBrush]};
-          if (b.id === ID_ENERGY) b.st = lastEnergyDir;
-          else if (b.id === ID_SEPARATOR) {
+                      };
+            container.appendChild(btn);
+                    });
+            dirRow.appendChild(container);
+            bodyEl.appendChild(dirRow);
+                  } else if (c.id === ID_BUTTON || c.id === ID_LAMP) {
+            titleEl.textContent = c.id === ID_LAMP ? t("editLamp") : t("editButton");
+            addToggleRow(bodyEl, t("status"), c.status === 1, v => {
+            const ns = v ? 1 : 0;
+            setCell(gx, gy, c.id, ns);
+            wasmUpdate(gx, gy, c.id, ns);
+            render();
+                    }, () => c.status === 1 ? t("on") : t("off"));
+                  } else if (c.id === ID_DELAY) {
+            titleEl.textContent = t("editDelayer");
+            addSliderRow(bodyEl, t("delay"), 1, 255, c.status || 1, v => {
+            setCell(gx, gy, c.id, v);
+            wasmUpdate(gx, gy, c.id, v);
+            render();
+                    });
+                  }
+            const wr = wrap.getBoundingClientRect();
+            let l = mx - wr.left + 12;
+            let tp = my - wr.top + 12;
+            if (l + 260 > wr.width) l = mx - wr.left - 260;
+            if (tp + 140 > wr.height) tp = my - wr.top - 140;
+            editEl.style.left = l + "px";
+            editEl.style.top = tp + "px";
+            editEl.classList.add("show");
+                }
+            function addToggleRow(parent, label, initVal, onChange, textFn) {
+            const row = document.createElement("div");
+            row.className = "ed-row";
+            const lbl = document.createElement("label");
+            lbl.textContent = label + ":";
+            const btn = document.createElement("button");
+            btn.className = "btn" + (initVal ? " active" : "");
+            btn.textContent = textFn();
+            btn.style.minWidth = "78px";
+            btn.onclick = () => {
+            const nv = !btn.classList.contains("active");
+            onChange(nv);
+            btn.classList.toggle("active", nv);
+            btn.textContent = textFn();
+                  };
+            row.append(lbl, btn);
+            parent.appendChild(row);
+                }
+            function addSliderRow(parent, label, min, max, initVal, onChange) {
+            const row = document.createElement("div");
+            row.className = "ed-row";
+            const lbl = document.createElement("label");
+            lbl.textContent = label + ":";
+            const sl = document.createElement("input");
+            sl.type = "range";
+            sl.className = "ed-slider";
+            sl.min = min;
+            sl.max = max;
+            sl.value = initVal;
+            const vspan = document.createElement("span");
+            vspan.style.cssText = "font-size:12.5px;color:#b04040;min-width:26px;text-align:center;font-weight:600";
+            vspan.textContent = initVal;
+            sl.oninput = () => {
+            vspan.textContent = sl.value;
+            onChange(parseInt(sl.value));
+                  };
+            row.append(lbl, sl, vspan);
+            parent.appendChild(row);
+                }
+            function closeEdit() {
+            editEl.classList.remove("show");
+                }
+            document.getElementById("ed-close").addEventListener("click", closeEdit);
+            document.addEventListener("keydown", e => {
+            if (e.key === "Escape") closeEdit();
+                });
+            editEl.addEventListener("mousedown", e => e.stopPropagation());
+            function validG(x, y) {
+            return x >= 0 && x < GRID && y >= 0 && y < GRID;
+                }
+            wrap.addEventListener("mousedown", e => {
+            if (e.button === 2 || e.button === 1) {
+            panning = true;
+            panBtn = e.button;
+            panPrev = {x: e.clientX, y: e.clientY};
+            wrap.style.cursor = "grabbing";
+            e.preventDefault();
+            return;
+                  }
+            if (e.button !== 0) return;
+            
+                // Shift + Click = open edit menu WITHOUT placing block
+                if (e.shiftKey) {
+                  const g = screenToGrid(e.clientX, e.clientY);
+                  if (validG(g.x, g.y)) {
+                    const c = getCell(g.x, g.y);
+                    if (c.id !== 0 && c.id !== ID_SEPARATOR) {
+                      openEdit(g.x, g.y, e.clientX, e.clientY);
+                    }
+                  }
+                  return;
+                }
+            
+            if (editEl.classList.contains("show") && editEl.contains(e.target)) return;
+            closeEdit();
+            const g = screenToGrid(e.clientX, e.clientY);
+            drawStart = {sx: e.clientX, sy: e.clientY, gx: g.x, gy: g.y};
+            drawMoved = false;
+            drawing = true;
+            if (ctrlKey) {
+            lineOrigin = g;
+            return;
+                  }
+            if (!obsMode && validG(g.x, g.y)) placeBlock(g.x, g.y);
+                });
+            function screenToGrid(sx, sy) {
+            const rect = wrap.getBoundingClientRect();
+            const lx = sx - rect.left;
+            const ly = sy - rect.top;
+            const cs = cellPx();
+            const o = camOffset();
+            return {
+            x: Math.floor((lx + o.x) / cs),
+            y: Math.floor((ly + o.y) / cs)
+                  };
+                }
+            window.addEventListener("mousemove", e => {
+            if (panning) {
+            const dx = e.clientX - panPrev.x;
+            const dy = e.clientY - panPrev.y;
+            const cs = cellPx();
+            cam.x -= dx / cs;
+            cam.y -= dy / cs;
+            cam.x = Math.max(cvs.width / (2 * cs), Math.min(GRID - cvs.width / (2 * cs), cam.x));
+            cam.y = Math.max(cvs.height / (2 * cs), Math.min(GRID - cvs.height / (2 * cs), cam.y));
+            panPrev = {x: e.clientX, y: e.clientY};
+            render();
+                  }
+                });
+            window.addEventListener("mouseup", e => {
+            if (panning && e.button === panBtn) {
+            panning = false;
+            panBtn = -1;
+            wrap.style.cursor = "crosshair";
+                  }
+                });
+            wrap.addEventListener("mousemove", e => {
+            const g = screenToGrid(e.clientX, e.clientY);
+            if (validG(g.x, g.y)) {
+            hoverGx = g.x;
+            hoverGy = g.y;
+            document.getElementById("coords").textContent = `(${g.x}, ${g.y})`;
+                  } else {
+            hoverGx = hoverGy = -1;
+                  }
+            if (!drawing) {
+            render();
+            return;
+                  }
+            if (drawStart) {
+            const d = Math.hypot(e.clientX - drawStart.sx, e.clientY - drawStart.sy);
+            if (d > 3) drawMoved = true;
+                  }
+            if (obsMode) {
+            render();
+            return;
+                  }
+            if (ctrlKey && lineOrigin) {
+            render();
+            return;
+                  }
+            if (drawMoved && validG(g.x, g.y) && !ctrlKey) {
+            placeBlock(g.x, g.y);
+            render();
+                  }
+                });
+            wrap.addEventListener("mouseup", e => {
+            if (e.button !== 0 || !drawing) return;
+            drawing = false;
+            if (lineOrigin && !obsMode) {
+            const g = screenToGrid(e.clientX, e.clientY);
+            if (validG(g.x, g.y)) bresenham(lineOrigin.x, lineOrigin.y, g.x, g.y);
+            lineOrigin = null;
+                  }
+            drawStart = null;
+            drawMoved = false;
+            render();
+                });
+            wrap.addEventListener("dblclick", e => {
+            if (e.button !== 0 || obsMode) return;
+            const g = screenToGrid(e.clientX, e.clientY);
+            if (validG(g.x, g.y)) {
+            const c = getCell(g.x, g.y);
+            if (c.id !== 0 && c.id !== ID_SEPARATOR) openEdit(g.x, g.y, e.clientX, e.clientY);
+                  }
+                });
+            wrap.addEventListener("mouseleave", () => {
+            hoverGx = hoverGy = -1;
+            drawing = false;
+            drawStart = null;
+            drawMoved = false;
+            panning = false;
+            wrap.style.cursor = "crosshair";
+            render();
+                });
+            wrap.addEventListener("wheel", e => {
+            e.preventDefault();
+            const d = e.deltaY > 0 ? -0.15 : 0.15;
+            const oldZ = cam.zoom;
+            cam.zoom = Math.max(ZMIN, Math.min(ZMAX, cam.zoom + d));
+            const g = screenToGrid(e.clientX, e.clientY);
+            const f = cam.zoom / oldZ;
+            cam.x = g.x + (cam.x - g.x) / f;
+            cam.y = g.y + (cam.y - g.y) / f;
+            render();
+                }, {passive: false});
+            document.addEventListener("keydown", e => {
+            if (e.key === "Control") ctrlKey = true;
+            
+                // WASD direction change when Energy brush is selected and hovering over an Energy block
+                if (selBrush === 1 && hoverGx >= 0 && hoverGy >= 0) {
+                  const cell = getCell(hoverGx, hoverGy);
+                  if (cell.id === ID_ENERGY) {
+                    let newDir = null;
+                    const k = e.key.toLowerCase();
+                    if (k === 'w') newDir = 10;      // вверх
+                    else if (k === 'a') newDir = 20; // лево
+                    else if (k === 's') newDir = 30; // вниз
+                    else if (k === 'd') newDir = 40; // право
+            
+                    if (newDir !== null) {
+                      const isOn = (cell.status % 10) === 1;
+                      const newSt = newDir + (isOn ? 1 : 0);
+                      setCell(hoverGx, hoverGy, ID_ENERGY, newSt);
+                      wasmUpdate(hoverGx, hoverGy, ID_ENERGY, newSt);
+                      lastEnergyDir = newDir;
+                      render();
+                      e.preventDefault();
+                      return;
+                    }
+                  }
+                }
+            
+            if (e.key === "1") { selBrush = 0; buildBP(); }
+            if (e.key === "2") { selBrush = 1; buildBP(); }
+            if (e.key === "3") { selBrush = 2; buildBP(); }
+            if (e.key === "4") { selBrush = 3; buildBP(); }
+            if (e.key === "5") { selBrush = 4; buildBP(); }
+            if (e.key === "6") { selBrush = 5; buildBP(); }
+            if (e.key.toLowerCase() === "o") { obsMode = !obsMode; closeEdit(); buildBP(); }
+            if (e.key.toLowerCase() === "c" || e.key === "Delete") { clearAll(); }
+                });
+            document.addEventListener("keyup", e => {
+            if (e.key === "Control") ctrlKey = false;
+                });
+            let lastPlaced = null;
+            function placeBlock(gx, gy) {
+            if (!validG(gx, gy) || obsMode) return;
+            if (lastPlaced && lastPlaced.x === gx && lastPlaced.y === gy) return;
+            let b = {...BRUSHES[selBrush]};
+            if (b.id === ID_ENERGY) b.st = lastEnergyDir;
+            else if (b.id === ID_SEPARATOR) {
+            const dir = getAutoDir(gx, gy);
+            separatorDir[gIdx(gx, gy)] = dir;
+            b.st = 0;
+                  }
+            setCell(gx, gy, b.id, b.st);
+            wasmUpdate(gx, gy, b.id, b.st);
+            lastPlaced = {x: gx, y: gy};
+            requestAnimationFrame(() => { lastPlaced = null; });
+            render();
+                }
+            function bresenham(x0, y0, x1, y1) {
+            const dx = Math.abs(x1 - x0);
+            const dy = Math.abs(y1 - y0);
+            const sx = x0 < x1 ? 1 : -1;
+            const sy = y0 < y1 ? 1 : -1;
+            let err = dx - dy;
+            let cx = x0;
+            let cy = y0;
+            for (;;) {
+            if (validG(cx, cy)) {
+            let b = {...BRUSHES[selBrush]};
+            if (b.id === ID_ENERGY) b.st = lastEnergyDir;
+            else if (b.id === ID_SEPARATOR) {
             const dir = getAutoDir(cx, cy);
             separatorDir[gIdx(cx, cy)] = dir;
             b.st = 0;
-          }
-          setCell(cx, cy, b.id, b.st);
-          wasmUpdate(cx, cy, b.id, b.st);
-        }
-        if (cx === x1 && cy === y1) break;
-        const e2 = 2 * err;
-        if (e2 > -dy) { err -= dy; cx += sx; }
-        if (e2 < dx) { err += dx; cy += sy; }
-      }
-      render();
-    }
-
-    function clearAll() {
-      if (!confirm(t("clearConfirm"))) return;
-      gridId.fill(0);
-      gridSt.fill(0);
-      separatorDir.fill(0);
-      if (wasm && gamePtr) {
-        wasm.GameStop(gamePtr);
-        gamePtr = wasm.GameInit();
-      }
-      render();
-    }
-
-    function stylePrev(el, b) {
-      switch (b.id) {
-        case 0:
-          el.style.background = "#131313";
-          break;
-        case 1:
-        case 4:
-        case 5:
-          el.style.background = "linear-gradient(135deg,#252525,#3a2020)";
-          break;
-        case 2:
-          el.style.background = "#1c1c1c";
-          el.style.borderTop = "3px solid #2a2a2a";
-          el.style.borderLeft = "3px solid #2a2a2a";
-          el.style.borderBottom = "3px solid #111";
-          el.style.borderRight = "3px solid #111";
-          break;
-        case 3:
-          el.style.cssText = "background:#10101a;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#b04040;border-radius:5px;border:1px solid #333;width:36px;height:36px";
-          el.textContent = "1";
-          break;
-      }
-    }
-
-    function buildBP() {
-      const bp = document.getElementById("bottom-panel");
-      bp.innerHTML = "";
-      BRUSHES.forEach((b, i) => {
-        const card = document.createElement("div");
-        card.className = "brush-card" + (selBrush === i ? " selected" : "");
-        const prev = document.createElement("div");
-        prev.className = "brush-prev";
-        stylePrev(prev, b);
-        const nm = document.createElement("div");
-        nm.className = "brush-name";
-        nm.textContent = t(b.key);
-        const keyLabel = document.createElement("div");
-        keyLabel.className = "brush-key";
-        keyLabel.textContent = b.hotkey;
-        card.append(prev, nm, keyLabel);
-        card.onclick = () => {
-          selBrush = i;
-          buildBP();
-        };
-        bp.appendChild(card);
-      });
-
-      const sep1 = document.createElement("div");
-      sep1.className = "sep";
-      bp.appendChild(sep1);
-
-      const clearCard = document.createElement("div");
-      clearCard.className = "clear-btn";
-      const cprev = document.createElement("div");
-      cprev.className = "clear-prev";
-      cprev.textContent = "⌫";
-      const cname = document.createElement("div");
-      cname.className = "brush-name";
-      cname.textContent = t("clear");
-      cname.style.color = "#e06666";
-      const ckey = document.createElement("div");
-      ckey.className = "clear-key";
-      ckey.textContent = "C";
-      clearCard.append(cprev, cname, ckey);
-      clearCard.onclick = clearAll;
-      bp.appendChild(clearCard);
-
-      const sep2 = document.createElement("div");
-      sep2.className = "sep";
-      bp.appendChild(sep2);
-
-      const obsCard = document.createElement("div");
-      obsCard.className = "obs-card" + (obsMode ? " active" : "");
-      const obsPrev = document.createElement("div");
-      obsPrev.className = "obs-prev";
-      obsPrev.innerHTML = `<svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 8C9.5 8 6 14 6 14C6 14 9.5 20 14 20C18.5 20 22 14 22 14C22 14 18.5 8 14 8Z" stroke="#b04040" stroke-width="2.5" stroke-linejoin="round"/><circle cx="14" cy="14" r="4" fill="#b04040"/></svg>`;
-      const obsName = document.createElement("div");
-      obsName.className = "obs-name";
-      obsName.textContent = t("observer");
-      const obsKey = document.createElement("div");
-      obsKey.className = "obs-key";
-      obsKey.textContent = "O";
-      obsCard.append(obsPrev, obsName, obsKey);
-      obsCard.onclick = () => {
-        obsMode = !obsMode;
-        closeEdit();
-        buildBP();
-      };
-      bp.appendChild(obsCard);
-    }
-
-    const speedSlider = document.getElementById("speed-slider");
-    const speedValEl = document.getElementById("speed-val");
-    const btnRun = document.getElementById("btn-run");
-
-    speedSlider.addEventListener("input", () => {
-      tps = parseInt(speedSlider.value);
-      speedValEl.textContent = tps + " tps";
-      if (running) {
-        clearInterval(tickTimer);
-        tickTimer = setInterval(wasmTick, 1000 / tps);
-      }
-    });
-
-    btnRun.addEventListener("click", () => {
-      if (!running) startGame();
-      else stopGame();
-    });
-
-    function startGame() {
-      if (!gamePtr) initWasmGame();
-      running = true;
-      btnRun.textContent = t("stop");
-      btnRun.classList.add("running");
-      tickTimer = setInterval(wasmTick, 1000 / tps);
-    }
-
-    function stopGame() {
-      running = false;
-      clearInterval(tickTimer);
-      tickTimer = null;
-      btnRun.textContent = t("start");
-      btnRun.classList.remove("running");
-      wasmStop();
-      initWasmGame();
-    }
-
-    document.getElementById("lang-btn").addEventListener("click", () => {
-      lang = lang === "ru" ? "en" : "ru";
-      document.getElementById("lang-btn").textContent = lang === "ru" ? "EN" : "RU";
-      document.documentElement.lang = lang;
-      applyLang();
-    });
-
-    function applyLang() {
-      document.getElementById("lbl-speed").textContent = t("speed");
-      btnRun.textContent = running ? t("stop") : t("start");
-      document.getElementById("pan-hint").textContent = t("panHint");
-      buildBP();
-    }
-
-    (function boot() {
-      resize();
-      applyLang();
-      loadWasm();
-      const h = document.getElementById("pan-hint");
-      h.classList.add("show");
-      setTimeout(() => h.classList.remove("show"), 4000);
-      buildBP();
-    })();
-  </script>
-</body>
+                      }
+            setCell(cx, cy, b.id, b.st);
+            wasmUpdate(cx, cy, b.id, b.st);
+                    }
+            if (cx === x1 && cy === y1) break;
+            const e2 = 2 * err;
+            if (e2 > -dy) { err -= dy; cx += sx; }
+            if (e2 < dx) { err += dx; cy += sy; }
+                  }
+            render();
+                }
+            function clearAll() {
+            if (!confirm(t("clearConfirm"))) return;
+            gridId.fill(0);
+            gridSt.fill(0);
+            separatorDir.fill(0);
+            if (wasm && gamePtr) {
+            wasm.GameStop(gamePtr);
+            gamePtr = wasm.GameInit();
+                  }
+            render();
+                }
+            function stylePrev(el, b) {
+            switch (b.id) {
+            case 0:
+            el.style.background = "#131313";
+            break;
+            case 1:
+            case 4:
+            case 5:
+            el.style.background = "linear-gradient(135deg,#252525,#3a2020)";
+            break;
+            case 2:
+            el.style.background = "#1c1c1c";
+            el.style.borderTop = "3px solid #2a2a2a";
+            el.style.borderLeft = "3px solid #2a2a2a";
+            el.style.borderBottom = "3px solid #111";
+            el.style.borderRight = "3px solid #111";
+            break;
+            case 3:
+            el.style.cssText = "background:#10101a;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#b04040;border-radius:5px;border:1px solid #333;width:36px;height:36px";
+            el.textContent = "1";
+            break;
+                  }
+                }
+            function buildBP() {
+            const bp = document.getElementById("bottom-panel");
+            bp.innerHTML = "";
+            BRUSHES.forEach((b, i) => {
+            const card = document.createElement("div");
+            card.className = "brush-card" + (selBrush === i ? " selected" : "");
+            const prev = document.createElement("div");
+            prev.className = "brush-prev";
+            stylePrev(prev, b);
+            const nm = document.createElement("div");
+            nm.className = "brush-name";
+            nm.textContent = t(b.key);
+            const keyLabel = document.createElement("div");
+            keyLabel.className = "brush-key";
+            keyLabel.textContent = b.hotkey;
+            card.append(prev, nm, keyLabel);
+            card.onclick = () => {
+            selBrush = i;
+            buildBP();
+                    };
+            bp.appendChild(card);
+                  });
+            const sep1 = document.createElement("div");
+            sep1.className = "sep";
+            bp.appendChild(sep1);
+            const clearCard = document.createElement("div");
+            clearCard.className = "clear-btn";
+            const cprev = document.createElement("div");
+            cprev.className = "clear-prev";
+            cprev.textContent = "⌫";
+            const cname = document.createElement("div");
+            cname.className = "brush-name";
+            cname.textContent = t("clear");
+            cname.style.color = "#e06666";
+            const ckey = document.createElement("div");
+            ckey.className = "clear-key";
+            ckey.textContent = "C";
+            clearCard.append(cprev, cname, ckey);
+            clearCard.onclick = clearAll;
+            bp.appendChild(clearCard);
+            const sep2 = document.createElement("div");
+            sep2.className = "sep";
+            bp.appendChild(sep2);
+            const obsCard = document.createElement("div");
+            obsCard.className = "obs-card" + (obsMode ? " active" : "");
+            const obsPrev = document.createElement("div");
+            obsPrev.className = "obs-prev";
+            obsPrev.innerHTML = `<svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 8C9.5 8 6 14 6 14C6 14 9.5 20 14 20C18.5 20 22 14 22 14C22 14 18.5 8 14 8Z" stroke="#b04040" stroke-width="2.5" stroke-linejoin="round"/><circle cx="14" cy="14" r="4" fill="#b04040"/></svg>`;
+            const obsName = document.createElement("div");
+            obsName.className = "obs-name";
+            obsName.textContent = t("observer");
+            const obsKey = document.createElement("div");
+            obsKey.className = "obs-key";
+            obsKey.textContent = "O";
+            obsCard.append(obsPrev, obsName, obsKey);
+            obsCard.onclick = () => {
+            obsMode = !obsMode;
+            closeEdit();
+            buildBP();
+                  };
+            bp.appendChild(obsCard);
+                }
+            const speedSlider = document.getElementById("speed-slider");
+            const speedValEl = document.getElementById("speed-val");
+            const btnRun = document.getElementById("btn-run");
+            speedSlider.addEventListener("input", () => {
+            tps = parseInt(speedSlider.value);
+            speedValEl.textContent = tps + " tps";
+            if (running) {
+            clearInterval(tickTimer);
+            tickTimer = setInterval(wasmTick, 1000 / tps);
+                  }
+                });
+            btnRun.addEventListener("click", () => {
+            if (!running) startGame();
+            else stopGame();
+                });
+            function startGame() {
+            if (!gamePtr) initWasmGame();
+            running = true;
+            btnRun.textContent = t("stop");
+            btnRun.classList.add("running");
+            tickTimer = setInterval(wasmTick, 1000 / tps);
+                }
+            function stopGame() {
+            running = false;
+            clearInterval(tickTimer);
+            tickTimer = null;
+            btnRun.textContent = t("start");
+            btnRun.classList.remove("running");
+            wasmStop();
+            initWasmGame();
+                }
+            document.getElementById("lang-btn").addEventListener("click", () => {
+            lang = lang === "ru" ? "en" : "ru";
+            document.getElementById("lang-btn").textContent = lang === "ru" ? "EN" : "RU";
+            document.documentElement.lang = lang;
+            applyLang();
+                });
+            function applyLang() {
+            document.getElementById("lbl-speed").textContent = t("speed");
+            btnRun.textContent = running ? t("stop") : t("start");
+            document.getElementById("pan-hint").textContent = t("panHint");
+            buildBP();
+                }
+                (function boot() {
+            resize();
+            applyLang();
+            loadWasm();
+            const h = document.getElementById("pan-hint");
+            h.classList.add("show");
+            setTimeout(() => h.classList.remove("show"), 4000);
+            buildBP();
+                })();
+        </script>
+    </body>
 </html>

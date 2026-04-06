@@ -32,26 +32,28 @@ pub const Separator = struct {
                     }
                 },
                 3 => {
-                    const dtime = (matrix.*[ux][uy].status & 0xFFFF) / 10;
-                    const dx2 = @as(isize, @intCast(ux)) - @as(isize, @intCast(x));
-                    const dy2 = @as(isize, @intCast(uy)) - @as(isize, @intCast(y));
-                    const dir: usize = switch (dx2) {
-                        0 => switch (dy2) {
-                            -1 => 2,
-                            1 => 0,
-                            else => unreachable,
-                        },
-                        -1 => if (dy == 0) 3 else unreachable,
-                        1 => if (dy == 0) 1 else unreachable,
-                        else => unreachable,
-                    };
+                    if (((cell.status >> 16) % 10) == 0 and ((dx != ux or dy != uy))) {
+                        const dtime = (matrix.*[ux][uy].status & 0xFFFF) / 10;
+                        const dx2 = @as(isize, @intCast(ux)) - @as(isize, @intCast(x));
+                        const dy2 = @as(isize, @intCast(uy)) - @as(isize, @intCast(y));
+                        const dir: usize = switch (dx2) {
+                            0 => switch (dy2) {
+                                -1 => 2,
+                                1 => 0,
+                                else => unreachable,
+                            },
+                            -1 => if (dy2 == 0) 3 else unreachable,
+                            1 => if (dy2 == 0) 1 else unreachable,
+                            else => 0,
+                        };
 
-                    newMatrix.*[ux][uy].status = (((getNumTick() + dtime) * 10 + 1) << 16) | ((dtime * 10) + dir);
-                    buffResult.*.append(allocator, .{
-                        .x = ux,
-                        .y = uy,
-                        .newStatus = (newMatrix.*[ux][uy].status & 0xFFFF),
-                    }) catch {};
+                        newMatrix.*[ux][uy].status = (((getNumTick() + dtime) * 10 + 1) << 16) | ((dtime * 10) + dir);
+                        buffResult.*.append(allocator, .{
+                            .x = ux,
+                            .y = uy,
+                            .newStatus = (newMatrix.*[ux][uy].status & 0xFFFF),
+                        }) catch {};
+                    }
                 },
                 else => {},
             }

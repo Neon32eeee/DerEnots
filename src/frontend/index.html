@@ -375,6 +375,15 @@
             #pan-hint.show {
             opacity: 1;
             }
+            #help-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(13,13,13,0.92);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            }
             ::-webkit-scrollbar {
             height: 5px;
             }
@@ -414,6 +423,13 @@
             </div>
             <div id="bottom-panel"></div>
         </div>
+        <div id="help-modal">
+            <div style="background:#161616;border:3px solid #b04040;border-radius:12px;width:90%;max-width:620px;max-height:90vh;overflow-y:auto;padding:30px 28px;position:relative;color:#ddd;box-shadow:0 0 40px rgba(176,64,64,.3);">
+                <span id="help-close" style="position:absolute;top:14px;right:24px;font-size:32px;line-height:1;cursor:pointer;color:#888;">×</span>
+                <h2 id="help-title" style="color:#b04040;margin:0 0 20px;font-size:24px;font-weight:700;"></h2>
+                <div id="help-body" style="font-size:14px;line-height:1.6;"></div>
+            </div>
+        </div>
         <script>
             "use strict";
             const I18N = {
@@ -426,7 +442,7 @@
             separator: "Разделитель", lamp: "Лампа",
             panHint: "ПКМ / Сред. кнопка — перемещение камеры",
             clearConfirm: "Очистить всё поле?"
-                  },
+                              },
             en: {
             speed: "Speed:", start: "Start", stop: "Stop",
             empty: "Empty", energy: "Energy", button: "Button", delayer: "Delayer", clear: "Clear",
@@ -436,8 +452,8 @@
             separator: "Separator", lamp: "Lamp",
             panHint: "RMB / Middle btn — pan camera",
             clearConfirm: "Clear entire field?"
-                  }
-                };
+                              }
+                            };
             let lang = "en";
             const t = k => I18N[lang][k] || k;
             const GRID = 1000;
@@ -450,6 +466,7 @@
             const ID_DELAY = 3;
             const ID_SEPARATOR = 4;
             const ID_LAMP = 5;
+            
             let wasm = null;
             let gamePtr = null;
             const gridId = new Uint8Array(GRID * GRID);
@@ -460,13 +477,13 @@
             function setCell(x, y, id, st) { const i = gIdx(x, y); gridId[i] = id; gridSt[i] = st; }
             let cam = { x: 500, y: 500, zoom: 1 };
             const BRUSHES = [
-                  {id: 0, st: 0, key: "empty", hotkey: "1"},
-                  {id: 1, st: 10, key: "energy", hotkey: "2"},
-                  {id: 2, st: 0, key: "button", hotkey: "3"},
-                  {id: 3, st: 1, key: "delayer", hotkey: "4"},
-                  {id: 4, st: 0, key: "separator", hotkey: "5"},
-                  {id: 5, st: 0, key: "lamp", hotkey: "6"}
-                ];
+                              {id: 0, st: 0, key: "empty", hotkey: "1"},
+                              {id: 1, st: 10, key: "energy", hotkey: "2"},
+                              {id: 2, st: 0, key: "button", hotkey: "3"},
+                              {id: 3, st: 1, key: "delayer", hotkey: "4"},
+                              {id: 4, st: 0, key: "separator", hotkey: "5"},
+                              {id: 5, st: 0, key: "lamp", hotkey: "6"}
+                            ];
             let selBrush = 1;
             let obsMode = false;
             let lastEnergyDir = 10;
@@ -483,6 +500,11 @@
             let ctrlKey = false;
             let lineOrigin = null;
             let hoverGx = -1, hoverGy = -1;
+            let selecting = false;
+            let selStart = null;
+            let selRect = null;
+            let selectMoved = false;
+            
             async function loadWasm() {
             try {
             const r = await fetch("game.wasm");
@@ -491,16 +513,16 @@
             const {instance} = await WebAssembly.instantiate(buf, {env: {}});
             wasm = instance.exports;
             initWasmGame();
-                  } catch (e) {
+                              } catch (e) {
             console.warn("[WASM] game.wasm not available — UI-only mode.", e.message);
-                  }
-                }
+                              }
+                            }
             function initWasmGame() {
             if (!wasm) return;
             if (gamePtr) wasm.GameStop(gamePtr);
             gamePtr = wasm.GameInit();
             pushGridToWasm();
-                }
+                            }
             function pushGridToWasm() {
             if (!wasm || !gamePtr) return;
             for (let y = 0; y < GRID; y++) {
@@ -508,14 +530,14 @@
             const i = gIdx(x, y);
             if (gridId[i] !== 0) {
             wasm.GameUpdate(gamePtr, x, y, gridId[i], gridSt[i]);
-                      }
-                    }
-                  }
-                }
+                                  }
+                                }
+                              }
+                            }
             function wasmUpdate(x, y, id, st) {
             if (!wasm || !gamePtr) return;
             wasm.GameUpdate(gamePtr, x, y, id, st);
-                }
+                            }
             function wasmTick() {
             if (!wasm || !gamePtr) return;
             try {
@@ -532,45 +554,45 @@
             const ns = dv.getUint8(o + 8);
             if (cx >= 0 && cx < GRID && cy >= 0 && cy < GRID) {
             gridSt[gIdx(cx, cy)] = ns;
-                        }
-                      }
+                                    }
+                                  }
             wasm.freeArray();
-                    }
-                  } catch (err) {
+                                }
+                              } catch (err) {
             console.error("[WASM] Error in GameTick:", err);
-                  }
+                              }
             document.getElementById("tick-counter").textContent = curTick.toLocaleString("ru-RU");
             render();
-                }
+                            }
             function wasmStop() {
             if (!wasm || !gamePtr) return;
             wasm.GameStop(gamePtr);
             gamePtr = null;
-                }
+                            }
             function getAutoDir(gx, gy) {
             const neighbors = [
-                    {dx: -1, dy: 0, dir: 40},
-                    {dx: 1, dy: 0, dir: 20},
-                    {dx: 0, dy: -1, dir: 30},
-                    {dx: 0, dy: 1, dir: 10}
-                  ];
+                                {dx: -1, dy: 0, dir: 40},
+                                {dx: 1, dy: 0, dir: 20},
+                                {dx: 0, dy: -1, dir: 30},
+                                {dx: 0, dy: 1, dir: 10}
+                              ];
             for (let n of neighbors) {
             const nx = gx + n.dx;
             const ny = gy + n.dy;
             if (nx >= 0 && nx < GRID && ny >= 0 && ny < GRID && getCell(nx, ny).id !== ID_EMPTY) {
             return n.dir;
-                    }
-                  }
+                                }
+                              }
             return 10;
-                }
+                            }
             function getRemainingTime(gx, gy) {
             if (!wasm || !gamePtr) return gridSt[gIdx(gx, gy)] || 0;
             try {
             return wasm.getTimeDalye(gamePtr, gx, gy);
-                  } catch (e) {
+                              } catch (e) {
             return gridSt[gIdx(gx, gy)] || 0;
-                  }
-                }
+                              }
+                            }
             const cvs = document.getElementById("game-canvas");
             const ctx = cvs.getContext("2d");
             const wrap = document.getElementById("canvas-wrap");
@@ -578,13 +600,13 @@
             cvs.width = wrap.clientWidth;
             cvs.height = wrap.clientHeight;
             render();
-                }
+                            }
             window.addEventListener("resize", resize);
             function cellPx() { return BCELL * cam.zoom; }
             function camOffset() {
             const cs = cellPx();
             return { x: cam.x * cs - cvs.width / 2, y: cam.y * cs - cvs.height / 2 };
-                }
+                            }
             function visibleRange() {
             const cs = cellPx();
             const o = camOffset();
@@ -593,8 +615,8 @@
             y0: Math.max(0, Math.floor(o.y / cs)),
             x1: Math.min(GRID, Math.ceil((o.x + cvs.width) / cs)),
             y1: Math.min(GRID, Math.ceil((o.y + cvs.height) / cs))
-                  };
-                }
+                              };
+                            }
             function render() {
             const W = cvs.width;
             const H = cvs.height;
@@ -612,8 +634,8 @@
             const py = gy * cs - o.y;
             const i = gIdx(gx, gy);
             renderCell(px, py, cs, pad, inner, gx, gy, gridId[i], gridSt[i]);
-                    }
-                  }
+                                }
+                              }
             if (cs >= 8) {
             ctx.strokeStyle = cs >= 16 ? "rgba(55,55,55,0.85)" : "rgba(40,40,40,0.6)";
             ctx.lineWidth = 1;
@@ -626,14 +648,14 @@
             const sx = Math.round(gx * cs - o.x) + 0.5;
             ctx.moveTo(sx, y0scr);
             ctx.lineTo(sx, y1scr);
-                    }
+                                }
             for (let gy = v.y0; gy <= v.y1; gy++) {
             const sy = Math.round(gy * cs - o.y) + 0.5;
             ctx.moveTo(x0scr, sy);
             ctx.lineTo(x1scr, sy);
-                    }
+                                }
             ctx.stroke();
-                  }
+                              }
             if (hoverGx >= 0 && hoverGy >= 0) {
             const hpx = hoverGx * cs - o.x;
             const hpy = hoverGy * cs - o.y;
@@ -642,7 +664,7 @@
             ctx.lineWidth = 2.5;
             ctx.strokeRect(hpx + 1, hpy + 1, cs - 2, cs - 2);
             ctx.restore();
-                  }
+                              }
             if (ctrlKey && drawing && lineOrigin) {
             const sx = lineOrigin.x * cs - o.x + cs / 2;
             const sy = lineOrigin.y * cs - o.y + cs / 2;
@@ -657,9 +679,9 @@
             ctx.lineTo(ex, ey);
             ctx.stroke();
             ctx.restore();
-                  }
+                              }
             document.getElementById("zoom-info").textContent = `×${cam.zoom.toFixed(1)}`;
-                }
+                            }
             function renderCell(px, py, cs, pad, inner, gx, gy, id, st) {
             switch (id) {
             case ID_EMPTY:
@@ -682,13 +704,13 @@
             ctx.fillStyle = "rgba(255,80,80,0.25)";
             ctx.fillRect(px + pad + 1, py + pad + 1, inner - 2, inner - 2);
             ctx.restore();
-                      } else {
+                                  } else {
             ctx.fillStyle = "#282828";
             ctx.fillRect(px + pad, py + pad, inner, inner);
             ctx.strokeStyle = "#353535";
             ctx.lineWidth = 1;
             ctx.strokeRect(px + pad + 0.5, py + pad + 0.5, inner - 1, inner - 1);
-                      }
+                                  }
             if (cs >= 14) {
             ctx.save();
             ctx.translate(px + cs / 2, py + cs / 2);
@@ -704,30 +726,30 @@
             ctx.moveTo(-size * 0.55, -size * 0.25);
             ctx.lineTo(0, -size * 0.85);
             ctx.lineTo(size * 0.55, -size * 0.25);
-                        } else if (dirCode === 2) {
+                                    } else if (dirCode === 2) {
             ctx.moveTo(size * 0.7, 0);
             ctx.lineTo(-size * 0.85, 0);
             ctx.moveTo(-size * 0.25, -size * 0.55);
             ctx.lineTo(-size * 0.85, 0);
             ctx.lineTo(-size * 0.25, size * 0.55);
-                        } else if (dirCode === 3) {
+                                    } else if (dirCode === 3) {
             ctx.moveTo(0, -size * 0.7);
             ctx.lineTo(0, size * 0.85);
             ctx.moveTo(-size * 0.55, size * 0.25);
             ctx.lineTo(0, size * 0.85);
             ctx.lineTo(size * 0.55, size * 0.25);
-                        } else if (dirCode === 4) {
+                                    } else if (dirCode === 4) {
             ctx.moveTo(-size * 0.7, 0);
             ctx.lineTo(size * 0.85, 0);
             ctx.moveTo(size * 0.25, -size * 0.55);
             ctx.lineTo(size * 0.85, 0);
             ctx.lineTo(size * 0.25, size * 0.55);
-                        }
+                                    }
             ctx.stroke();
             ctx.restore();
-                      }
+                                  }
             break;
-                    }
+                                }
             case ID_BUTTON: {
             const base = (st % 10 === 1) ? "#803030" : "#1c1c1c";
             ctx.fillStyle = base;
@@ -740,7 +762,7 @@
             ctx.fillRect(px + pad + inner - hp, py + pad, hp, inner);
             ctx.fillRect(px + pad, py + pad + inner - hp, inner, hp);
             break;
-                    }
+                                }
             case ID_DELAY:
             ctx.fillStyle = "#10101a";
             ctx.fillRect(px + pad, py + pad, inner, inner);
@@ -751,7 +773,7 @@
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.fillText(String(getRemainingTime(gx, gy)), px + cs / 2, py + cs / 2 + 1);
-                      }
+                                  }
             break;
             case ID_SEPARATOR: {
             const isOn = st !== 0;
@@ -769,13 +791,13 @@
             ctx.fillStyle = "rgba(255,80,80,0.25)";
             ctx.fillRect(px + pad + 1, py + pad + 1, inner - 2, inner - 2);
             ctx.restore();
-                      } else {
+                                  } else {
             ctx.fillStyle = "#282828";
             ctx.fillRect(px + pad, py + pad, inner, inner);
             ctx.strokeStyle = "#353535";
             ctx.lineWidth = 1;
             ctx.strokeRect(px + pad + 0.5, py + pad + 0.5, inner - 1, inner - 1);
-                      }
+                                  }
             if (cs >= 14) {
             ctx.save();
             ctx.translate(px + cs / 2, py + cs / 2);
@@ -793,28 +815,28 @@
             ctx.moveTo(-size * 0.55, -size * 0.25);
             ctx.lineTo(0, -size * 0.85);
             ctx.lineTo(size * 0.55, -size * 0.25);
-                          } else if (dCode === 20) {
+                                      } else if (dCode === 20) {
             ctx.moveTo(size * 0.7, 0);
             ctx.lineTo(-size * 0.85, 0);
             ctx.moveTo(-size * 0.25, -size * 0.55);
             ctx.lineTo(-size * 0.85, 0);
             ctx.lineTo(-size * 0.25, size * 0.55);
-                          } else if (dCode === 30) {
+                                      } else if (dCode === 30) {
             ctx.moveTo(0, -size * 0.7);
             ctx.lineTo(0, size * 0.85);
             ctx.moveTo(-size * 0.55, size * 0.25);
             ctx.lineTo(0, size * 0.85);
             ctx.lineTo(size * 0.55, size * 0.25);
-                          } else if (dCode === 40) {
+                                      } else if (dCode === 40) {
             ctx.moveTo(-size * 0.7, 0);
             ctx.lineTo(size * 0.85, 0);
             ctx.moveTo(size * 0.25, -size * 0.55);
             ctx.lineTo(size * 0.85, 0);
             ctx.lineTo(size * 0.25, size * 0.55);
-                          }
+                                      }
             ctx.stroke();
             ctx.restore();
-                        };
+                                    };
             drawArrow(dirCode);
             let leftDir = 20, rightDir = 40;
             if (dirCode === 10) { leftDir = 20; rightDir = 40; }
@@ -824,9 +846,9 @@
             drawArrow(leftDir);
             drawArrow(rightDir);
             ctx.restore();
-                      }
+                                  }
             break;
-                    }
+                                }
             case ID_LAMP: {
             const isOn = st === 1;
             if (isOn) {
@@ -842,17 +864,17 @@
             ctx.fillStyle = "rgba(255,120,120,0.35)";
             ctx.fillRect(px + pad + 2, py + pad + 2, inner - 4, inner - 4);
             ctx.restore();
-                      } else {
+                                  } else {
             ctx.fillStyle = "#222222";
             ctx.fillRect(px + pad, py + pad, inner, inner);
             ctx.strokeStyle = "#3a3a3a";
             ctx.lineWidth = 1.5;
             ctx.strokeRect(px + pad + 0.5, py + pad + 0.5, inner - 1, inner - 1);
-                      }
+                                  }
             break;
-                    }
-                  }
-                }
+                                }
+                              }
+                            }
             wrap.addEventListener("contextmenu", e => e.preventDefault());
             let editEl = document.getElementById("block-edit");
             function openEdit(gx, gy, mx, my) {
@@ -871,7 +893,7 @@
             wasmUpdate(gx, gy, c.id, ns);
             render();
             openEdit(gx, gy, mx, my);
-                    }, () => isOnNow ? t("on") : t("off"));
+                                }, () => isOnNow ? t("on") : t("off"));
             const dirRow = document.createElement("div");
             dirRow.style.marginTop = "14px";
             dirRow.innerHTML = `<div style="font-size:12.5px;color:#bbb;margin-bottom:8px">Direction:</div>`;
@@ -879,7 +901,7 @@
             container.style.display = "grid";
             container.style.gridTemplateColumns = "repeat(4,1fr)";
             container.style.gap = "6px";
-                    [{code:10,sym:"↑"},{code:20,sym:"←"},{code:30,sym:"↓"},{code:40,sym:"→"}].forEach(d => {
+                                [{code:10,sym:"↑"},{code:20,sym:"←"},{code:30,sym:"↓"},{code:40,sym:"→"}].forEach(d => {
             const btn = document.createElement("button");
             btn.className = "ed-dir-btn" + (dir === d.code ? " active" : "");
             btn.textContent = d.sym;
@@ -890,27 +912,27 @@
             wasmUpdate(gx, gy, c.id, newSt);
             render();
             openEdit(gx, gy, mx, my);
-                      };
+                                  };
             container.appendChild(btn);
-                    });
+                                });
             dirRow.appendChild(container);
             bodyEl.appendChild(dirRow);
-                  } else if (c.id === ID_BUTTON || c.id === ID_LAMP) {
+                              } else if (c.id === ID_BUTTON || c.id === ID_LAMP) {
             titleEl.textContent = c.id === ID_LAMP ? t("editLamp") : t("editButton");
             addToggleRow(bodyEl, t("status"), c.status === 1, v => {
             const ns = v ? 1 : 0;
             setCell(gx, gy, c.id, ns);
             wasmUpdate(gx, gy, c.id, ns);
             render();
-                    }, () => c.status === 1 ? t("on") : t("off"));
-                  } else if (c.id === ID_DELAY) {
+                                }, () => c.status === 1 ? t("on") : t("off"));
+                              } else if (c.id === ID_DELAY) {
             titleEl.textContent = t("editDelayer");
             addSliderRow(bodyEl, t("delay"), 1, 255, c.status || 1, v => {
             setCell(gx, gy, c.id, v);
             wasmUpdate(gx, gy, c.id, v);
             render();
-                    });
-                  }
+                                });
+                              }
             const wr = wrap.getBoundingClientRect();
             let l = mx - wr.left + 12;
             let tp = my - wr.top + 12;
@@ -919,7 +941,7 @@
             editEl.style.left = l + "px";
             editEl.style.top = tp + "px";
             editEl.classList.add("show");
-                }
+                            }
             function addToggleRow(parent, label, initVal, onChange, textFn) {
             const row = document.createElement("div");
             row.className = "ed-row";
@@ -934,10 +956,10 @@
             onChange(nv);
             btn.classList.toggle("active", nv);
             btn.textContent = textFn();
-                  };
+                              };
             row.append(lbl, btn);
             parent.appendChild(row);
-                }
+                            }
             function addSliderRow(parent, label, min, max, initVal, onChange) {
             const row = document.createElement("div");
             row.className = "ed-row";
@@ -955,21 +977,17 @@
             sl.oninput = () => {
             vspan.textContent = sl.value;
             onChange(parseInt(sl.value));
-                  };
+                              };
             row.append(lbl, sl, vspan);
             parent.appendChild(row);
-                }
+                            }
             function closeEdit() {
             editEl.classList.remove("show");
-                }
+                            }
             document.getElementById("ed-close").addEventListener("click", closeEdit);
-            document.addEventListener("keydown", e => {
-            if (e.key === "Escape") closeEdit();
-                });
-            editEl.addEventListener("mousedown", e => e.stopPropagation());
             function validG(x, y) {
             return x >= 0 && x < GRID && y >= 0 && y < GRID;
-                }
+                            }
             wrap.addEventListener("mousedown", e => {
             if (e.button === 2 || e.button === 1) {
             panning = true;
@@ -978,33 +996,27 @@
             wrap.style.cursor = "grabbing";
             e.preventDefault();
             return;
-                  }
+                              }
             if (e.button !== 0) return;
-            
-                // Shift + Click = open edit menu WITHOUT placing block
-                if (e.shiftKey) {
-                  const g = screenToGrid(e.clientX, e.clientY);
-                  if (validG(g.x, g.y)) {
-                    const c = getCell(g.x, g.y);
-                    if (c.id !== 0 && c.id !== ID_SEPARATOR) {
-                      openEdit(g.x, g.y, e.clientX, e.clientY);
-                    }
-                  }
-                  return;
-                }
-            
+            const g = screenToGrid(e.clientX, e.clientY);
+            if (e.shiftKey) {
+              selecting = true;
+              selStart = {x: g.x, y: g.y};
+              selRect = null;
+              selectMoved = false;
+              return;
+            }
             if (editEl.classList.contains("show") && editEl.contains(e.target)) return;
             closeEdit();
-            const g = screenToGrid(e.clientX, e.clientY);
             drawStart = {sx: e.clientX, sy: e.clientY, gx: g.x, gy: g.y};
             drawMoved = false;
             drawing = true;
             if (ctrlKey) {
             lineOrigin = g;
             return;
-                  }
+                              }
             if (!obsMode && validG(g.x, g.y)) placeBlock(g.x, g.y);
-                });
+                            });
             function screenToGrid(sx, sy) {
             const rect = wrap.getBoundingClientRect();
             const lx = sx - rect.left;
@@ -1014,8 +1026,8 @@
             return {
             x: Math.floor((lx + o.x) / cs),
             y: Math.floor((ly + o.y) / cs)
-                  };
-                }
+                              };
+                            }
             window.addEventListener("mousemove", e => {
             if (panning) {
             const dx = e.clientX - panPrev.x;
@@ -1027,74 +1039,106 @@
             cam.y = Math.max(cvs.height / (2 * cs), Math.min(GRID - cvs.height / (2 * cs), cam.y));
             panPrev = {x: e.clientX, y: e.clientY};
             render();
-                  }
-                });
+                              }
+                            });
             window.addEventListener("mouseup", e => {
             if (panning && e.button === panBtn) {
             panning = false;
             panBtn = -1;
             wrap.style.cursor = "crosshair";
-                  }
-                });
+                              }
+                            });
             wrap.addEventListener("mousemove", e => {
             const g = screenToGrid(e.clientX, e.clientY);
             if (validG(g.x, g.y)) {
             hoverGx = g.x;
             hoverGy = g.y;
             document.getElementById("coords").textContent = `(${g.x}, ${g.y})`;
-                  } else {
+                              } else {
             hoverGx = hoverGy = -1;
-                  }
+                              }
+            if (selecting) {
+                if (selStart) {
+                  selRect = {
+                    x0: Math.min(selStart.x, g.x),
+                    y0: Math.min(selStart.y, g.y),
+                    x1: Math.max(selStart.x, g.x),
+                    y1: Math.max(selStart.y, g.y)
+                  };
+                  if (g.x !== selStart.x || g.y !== selStart.y) selectMoved = true;
+                  render();
+                }
+                return;
+              }
             if (!drawing) {
             render();
             return;
-                  }
+                              }
             if (drawStart) {
             const d = Math.hypot(e.clientX - drawStart.sx, e.clientY - drawStart.sy);
             if (d > 3) drawMoved = true;
-                  }
+                              }
             if (obsMode) {
             render();
             return;
-                  }
+                              }
             if (ctrlKey && lineOrigin) {
             render();
             return;
-                  }
+                              }
             if (drawMoved && validG(g.x, g.y) && !ctrlKey) {
             placeBlock(g.x, g.y);
             render();
-                  }
-                });
+                              }
+                            });
             wrap.addEventListener("mouseup", e => {
-            if (e.button !== 0 || !drawing) return;
+            if (e.button !== 0 || (!drawing && !selecting)) return;
+            if (selecting) {
+                selecting = false;
+                if (selStart) {
+                  if (!selectMoved) {
+                    const c = getCell(selStart.x, selStart.y);
+                    if (validG(selStart.x, selStart.y) && c.id !== 0 && c.id !== ID_SEPARATOR) {
+                      openEdit(selStart.x, selStart.y, e.clientX, e.clientY);
+                    }
+                  }
+                }
+                selStart = null;
+                selectMoved = false;
+                render();
+                return;
+              }
             drawing = false;
             if (lineOrigin && !obsMode) {
             const g = screenToGrid(e.clientX, e.clientY);
             if (validG(g.x, g.y)) bresenham(lineOrigin.x, lineOrigin.y, g.x, g.y);
             lineOrigin = null;
-                  }
+                              }
             drawStart = null;
             drawMoved = false;
             render();
-                });
+                            });
             wrap.addEventListener("dblclick", e => {
             if (e.button !== 0 || obsMode) return;
             const g = screenToGrid(e.clientX, e.clientY);
             if (validG(g.x, g.y)) {
             const c = getCell(g.x, g.y);
             if (c.id !== 0 && c.id !== ID_SEPARATOR) openEdit(g.x, g.y, e.clientX, e.clientY);
-                  }
-                });
+                              }
+                            });
             wrap.addEventListener("mouseleave", () => {
             hoverGx = hoverGy = -1;
             drawing = false;
             drawStart = null;
             drawMoved = false;
             panning = false;
+            selecting = false;
+            selStart = null;
+            selRect = null;
+            selectMoved = false;
             wrap.style.cursor = "crosshair";
             render();
-                });
+                            });
             wrap.addEventListener("wheel", e => {
             e.preventDefault();
             const d = e.deltaY > 0 ? -0.15 : 0.15;
@@ -1105,34 +1149,36 @@
             cam.x = g.x + (cam.x - g.x) / f;
             cam.y = g.y + (cam.y - g.y) / f;
             render();
-                }, {passive: false});
+                            }, {passive: false});
             document.addEventListener("keydown", e => {
             if (e.key === "Control") ctrlKey = true;
-            
-                // WASD direction change when Energy brush is selected and hovering over an Energy block
-                if (selBrush === 1 && hoverGx >= 0 && hoverGy >= 0) {
-                  const cell = getCell(hoverGx, hoverGy);
-                  if (cell.id === ID_ENERGY) {
-                    let newDir = null;
-                    const k = e.key.toLowerCase();
-                    if (k === 'w') newDir = 10;      // вверх
-                    else if (k === 'a') newDir = 20; // лево
-                    else if (k === 's') newDir = 30; // вниз
-                    else if (k === 'd') newDir = 40; // право
-            
-                    if (newDir !== null) {
-                      const isOn = (cell.status % 10) === 1;
-                      const newSt = newDir + (isOn ? 1 : 0);
-                      setCell(hoverGx, hoverGy, ID_ENERGY, newSt);
-                      wasmUpdate(hoverGx, hoverGy, ID_ENERGY, newSt);
-                      lastEnergyDir = newDir;
-                      render();
-                      e.preventDefault();
-                      return;
-                    }
-                  }
-                }
-            
+            if (e.key === 'F1') {
+              e.preventDefault();
+              showHelp();
+              return;
+            }
+            // WASD direction change when Energy brush is selected and hovering over an Energy block
+            if (selBrush === 1 && hoverGx >= 0 && hoverGy >= 0) {
+            const cell = getCell(hoverGx, hoverGy);
+            if (cell.id === ID_ENERGY) {
+            let newDir = null;
+            const k = e.key.toLowerCase();
+            if (k === 'w') newDir = 10;
+            else if (k === 'a') newDir = 20;
+            else if (k === 's') newDir = 30;
+            else if (k === 'd') newDir = 40;
+            if (newDir !== null) {
+            const isOn = (cell.status % 10) === 1;
+            const newSt = newDir + (isOn ? 1 : 0);
+            setCell(hoverGx, hoverGy, ID_ENERGY, newSt);
+            wasmUpdate(hoverGx, hoverGy, ID_ENERGY, newSt);
+            lastEnergyDir = newDir;
+            render();
+            e.preventDefault();
+            return;
+                                }
+                              }
+                            }
             if (e.key === "1") { selBrush = 0; buildBP(); }
             if (e.key === "2") { selBrush = 1; buildBP(); }
             if (e.key === "3") { selBrush = 2; buildBP(); }
@@ -1141,10 +1187,11 @@
             if (e.key === "6") { selBrush = 5; buildBP(); }
             if (e.key.toLowerCase() === "o") { obsMode = !obsMode; closeEdit(); buildBP(); }
             if (e.key.toLowerCase() === "c" || e.key === "Delete") { clearAll(); }
-                });
+                            });
             document.addEventListener("keyup", e => {
             if (e.key === "Control") ctrlKey = false;
-                });
+                            });
+            
             let lastPlaced = null;
             function placeBlock(gx, gy) {
             if (!validG(gx, gy) || obsMode) return;
@@ -1155,13 +1202,13 @@
             const dir = getAutoDir(gx, gy);
             separatorDir[gIdx(gx, gy)] = dir;
             b.st = 0;
-                  }
+                              }
             setCell(gx, gy, b.id, b.st);
             wasmUpdate(gx, gy, b.id, b.st);
             lastPlaced = {x: gx, y: gy};
             requestAnimationFrame(() => { lastPlaced = null; });
             render();
-                }
+                            }
             function bresenham(x0, y0, x1, y1) {
             const dx = Math.abs(x1 - x0);
             const dy = Math.abs(y1 - y0);
@@ -1178,28 +1225,29 @@
             const dir = getAutoDir(cx, cy);
             separatorDir[gIdx(cx, cy)] = dir;
             b.st = 0;
-                      }
+                                  }
             setCell(cx, cy, b.id, b.st);
             wasmUpdate(cx, cy, b.id, b.st);
-                    }
+                                }
             if (cx === x1 && cy === y1) break;
             const e2 = 2 * err;
             if (e2 > -dy) { err -= dy; cx += sx; }
             if (e2 < dx) { err += dx; cy += sy; }
-                  }
+                              }
             render();
-                }
+                            }
             function clearAll() {
             if (!confirm(t("clearConfirm"))) return;
             gridId.fill(0);
             gridSt.fill(0);
             separatorDir.fill(0);
+            selRect = null;
             if (wasm && gamePtr) {
             wasm.GameStop(gamePtr);
             gamePtr = wasm.GameInit();
-                  }
+                              }
             render();
-                }
+                            }
             function stylePrev(el, b) {
             switch (b.id) {
             case 0:
@@ -1221,8 +1269,8 @@
             el.style.cssText = "background:#10101a;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#b04040;border-radius:5px;border:1px solid #333;width:36px;height:36px";
             el.textContent = "1";
             break;
-                  }
-                }
+                              }
+                            }
             function buildBP() {
             const bp = document.getElementById("bottom-panel");
             bp.innerHTML = "";
@@ -1242,9 +1290,9 @@
             card.onclick = () => {
             selBrush = i;
             buildBP();
-                    };
+                                };
             bp.appendChild(card);
-                  });
+                              });
             const sep1 = document.createElement("div");
             sep1.className = "sep";
             bp.appendChild(sep1);
@@ -1282,9 +1330,9 @@
             obsMode = !obsMode;
             closeEdit();
             buildBP();
-                  };
+                              };
             bp.appendChild(obsCard);
-                }
+                            }
             const speedSlider = document.getElementById("speed-slider");
             const speedValEl = document.getElementById("speed-val");
             const btnRun = document.getElementById("btn-run");
@@ -1294,19 +1342,19 @@
             if (running) {
             clearInterval(tickTimer);
             tickTimer = setInterval(wasmTick, 1000 / tps);
-                  }
-                });
+                              }
+                            });
             btnRun.addEventListener("click", () => {
             if (!running) startGame();
             else stopGame();
-                });
+                            });
             function startGame() {
             if (!gamePtr) initWasmGame();
             running = true;
             btnRun.textContent = t("stop");
             btnRun.classList.add("running");
             tickTimer = setInterval(wasmTick, 1000 / tps);
-                }
+                            }
             function stopGame() {
             running = false;
             clearInterval(tickTimer);
@@ -1315,20 +1363,55 @@
             btnRun.classList.remove("running");
             wasmStop();
             initWasmGame();
-                }
+                            }
             document.getElementById("lang-btn").addEventListener("click", () => {
             lang = lang === "ru" ? "en" : "ru";
             document.getElementById("lang-btn").textContent = lang === "ru" ? "EN" : "RU";
             document.documentElement.lang = lang;
             applyLang();
-                });
+                            });
             function applyLang() {
             document.getElementById("lbl-speed").textContent = t("speed");
             btnRun.textContent = running ? t("stop") : t("start");
             document.getElementById("pan-hint").textContent = t("panHint");
             buildBP();
-                }
-                (function boot() {
+                            }
+            
+            // Help modal
+            const helpModal = document.getElementById('help-modal');
+            const helpTitleEl = document.getElementById('help-title');
+            const helpBodyEl = document.getElementById('help-body');
+            const helpCloseEl = document.getElementById('help-close');
+            function showHelp() {
+              const isRu = lang === 'ru';
+              helpTitleEl.textContent = isRu ? 'Подсказки игры и hotkeys' : 'Game Help & Hotkeys';
+              helpBodyEl.innerHTML = `
+            <p><strong>${isRu ? 'Горячие клавиши:' : 'Hotkeys:'}</strong></p>
+            <ul style="margin:12px 0 20px 20px;padding:0;list-style:none;">
+            <li><code>1</code>–<code>6</code>: ${t('empty')}, ${t('energy')}, ${t('button')}, ${t('delayer')}, ${t('separator')}, ${t('lamp')}</li>
+            <li><code>O</code>: ${t('observer')}</li>
+            <li><code>C</code> / <code>Delete</code>: ${t('clear')}</li>
+            <li><code>Shift</code> + ЛКМ (drag): ${isRu ? 'Выделить область' : 'Select area'}</li>
+            <li><code>Shift</code> + ЛКМ (click): ${isRu ? 'Редактировать блок' : 'Edit block'}</li>
+            <li><code>Ctrl</code> + drag ЛКМ: ${isRu ? 'Линия блоков' : 'Draw line'}</li>
+            <li><code>F1</code>: ${isRu ? 'Эта помощь' : 'This help'}</li>
+            <li><code>WASD</code> (hover on energy): ${isRu ? 'Сменить направление' : 'Change direction'}</li>
+            </ul>
+              `;
+              helpModal.style.display = 'flex';
+            }
+            helpCloseEl.addEventListener('click', () => helpModal.style.display = 'none');
+            helpModal.addEventListener('click', (e) => {
+              if (e.target === helpModal) helpModal.style.display = 'none';
+            });
+            document.addEventListener('keydown', (e) => {
+              if (e.key === 'Escape' && helpModal.style.display === 'flex') {
+                helpModal.style.display = 'none';
+                e.preventDefault();
+              }
+            });
+            
+                            (function boot() {
             resize();
             applyLang();
             loadWasm();
@@ -1336,7 +1419,7 @@
             h.classList.add("show");
             setTimeout(() => h.classList.remove("show"), 4000);
             buildBP();
-                })();
+                            })();
         </script>
     </body>
 </html>

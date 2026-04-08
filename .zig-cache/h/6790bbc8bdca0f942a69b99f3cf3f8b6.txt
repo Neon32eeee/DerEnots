@@ -1,5 +1,5 @@
 0
-218 8431430 1775304448349879378 9f66b3e4e51884d00c53cc589ee8ef49 0 src/beckend/root.zig
+218 9099290 1775506538240393865 9f66b3e4e51884d00c53cc589ee8ef49 0 src/beckend/root.zig
 22187 6528494 1755651176000000000 408a2a1c3d712caf2107e3e3dfb7022b 1 ubsan_rt.zig
 11083 6509607 1755651171000000000 3c8016eb348fede9a19b94ec4869d8a6 1 compiler_rt.zig
 7957 6528421 1773328981452662512 0ebbb46b337b65e85e7d177cfc93d2ca 1 std/std.zig
@@ -833,11 +833,11 @@
 419 6528320 1755651176000000000 ed7dfc04a5d0c4f0853edb5414ce981e 1 std/os/linux/bpf/btf_ext.zig
 24293 6528321 1755651176000000000 0c7d3ee9ea8e698a843ee6039fd161c4 1 std/os/linux/bpf/helpers.zig
 3221 6528068 1755651176000000000 fda67b74062c7f535bb0a6d0f1fe74fb 1 std/crypto/codecs/asn1/der/ArrayListReverse.zig
-218 8431430 1775304448349879378 9f66b3e4e51884d00c53cc589ee8ef49 0 /home/neon32/Новая Папка/DerEnots/src/beckend/root.zig
-4526 8485656 1775219926517657324 ed3ea4b80c1deb307f7adcca66dc097a 0 /home/neon32/Новая Папка/DerEnots/src/beckend/Logic.zig
-201 8495722 1775033811893303251 f83d762ba5bf24ce4d006c0b059bdf3a 0 /home/neon32/Новая Папка/DerEnots/src/beckend/OtherTypes.zig
-2561 8459204 1774947552857295546 5a3bb020ea1777e9e2e146793a0b61b9 0 /home/neon32/Новая Папка/DerEnots/src/beckend/Cell.zig
-4623 8491499 1775219936922811780 d91dd2379b4d79dbc33f791baef0f75f 0 /home/neon32/Новая Папка/DerEnots/src/beckend/Blocks/EnergyBloc.zig
-1893 8516688 1775219935136524631 fb491849d934b1b19bf452b83b6a2acc 0 /home/neon32/Новая Папка/DerEnots/src/beckend/Blocks/Button.zig
-2598 8626542 1775219933631661682 ebf00e8ff9f314575437096c7c7b37be 0 /home/neon32/Новая Папка/DerEnots/src/beckend/Blocks/Dalye.zig
-2914 8697671 1775219998650701512 3ef04cc135fe108ceb09a0571f0179c9 0 /home/neon32/Новая Папка/DerEnots/src/beckend/Blocks/Separator.zig
+218 9099290 1775506538240393865 9f66b3e4e51884d00c53cc589ee8ef49 0 /home/neon32/Новая Папка/DerEnots/src/beckend/root.zig
+5354 9099288 1775652112828794793 a236a6edc8314a387a9f6123a4fea919 0 /home/neon32/Новая Папка/DerEnots/src/beckend/Logic.zig
+201 9099289 1775506538240393865 f83d762ba5bf24ce4d006c0b059bdf3a 0 /home/neon32/Новая Папка/DerEnots/src/beckend/OtherTypes.zig
+2561 9099287 1775506538240393865 5a3bb020ea1777e9e2e146793a0b61b9 0 /home/neon32/Новая Папка/DerEnots/src/beckend/Cell.zig
+4245 9099285 1775506538240393865 48828725ea5e93fe64f932d33bffe413 0 /home/neon32/Новая Папка/DerEnots/src/beckend/Blocks/EnergyBloc.zig
+1893 9099283 1775506538240210417 fb491849d934b1b19bf452b83b6a2acc 0 /home/neon32/Новая Папка/DerEnots/src/beckend/Blocks/Button.zig
+2598 9099284 1775506538240393865 ebf00e8ff9f314575437096c7c7b37be 0 /home/neon32/Новая Папка/DerEnots/src/beckend/Blocks/Dalye.zig
+3092 9099286 1775506538240393865 e68e72a4482980f82569363645ae0348 0 /home/neon32/Новая Папка/DerEnots/src/beckend/Blocks/Separator.zig

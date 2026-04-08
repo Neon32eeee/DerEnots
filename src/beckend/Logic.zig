@@ -15,12 +15,14 @@ var numTick: usize = 0;
 pub const GameLogic = struct {
     matrix: [][1000]Cell,
     tickResult: std.ArrayList(NewTickBlock),
+    notvoidBlocks: std.ArrayList([2]usize),
 
     pub inline fn init() ?*GameLogic {
         const matrix = allocator.alloc([1000]Cell, 1000) catch {
             return null;
         };
         const tickResult = std.ArrayList(NewTickBlock){};
+        const notvoidBlocks = std.ArrayList([2]usize){};
 
         for (0..1000) |x| {
             for (0..1000) |y| {
@@ -31,7 +33,11 @@ pub const GameLogic = struct {
         const ptr = allocator.create(GameLogic) catch {
             return null;
         };
-        ptr.* = .{ .matrix = matrix, .tickResult = tickResult };
+        ptr.* = .{
+            .matrix = matrix,
+            .tickResult = tickResult,
+            .notvoidBlocks = notvoidBlocks,
+        };
         return ptr;
     }
 
@@ -45,12 +51,29 @@ pub const GameLogic = struct {
         if (x >= 1000 or y >= 1000) return 1;
 
         self.matrix[x][y].id = newId;
-        if (newId == 3) {
-            self.matrix[x][y].status = ((newStatus * 10) << 16) | ((newStatus * 10) & 0xFFFF);
-            return 0;
+
+        const newBlock = [2]usize{ x, y };
+        switch (newId) {
+            0 => {
+                for (self.notvoidBlocks.items, 0..) |i, id| {
+                    if (i[0] == x and i[1] == y) {
+                        _ = self.notvoidBlocks.swapRemove(id);
+                    }
+                }
+                self.matrix[x][y].status = newStatus;
+                return 0;
+            },
+            3 => {
+                self.matrix[x][y].status = ((newStatus * 10) << 16) | ((newStatus * 10) & 0xFFFF);
+                self.notvoidBlocks.append(allocator, newBlock) catch return 1;
+                return 0;
+            },
+            else => {
+                self.matrix[x][y].status = newStatus;
+                self.notvoidBlocks.append(allocator, newBlock) catch return 1;
+                return 0;
+            },
         }
-        self.matrix[x][y].status = newStatus;
-        return 0;
     }
 
     pub fn tick(self: *GameLogic) ?[*]NewTickBlock {
@@ -58,15 +81,18 @@ pub const GameLogic = struct {
 
         self.tickResult.clearRetainingCapacity();
 
-        for (self.matrix, 0..) |row, x| {
-            for (row, 0..) |cell, y| {
-                switch (cell.id) {
-                    1 => EnargyBlock.tick(x, y, &self.matrix, &newMatrix, &self.tickResult),
-                    2 => Button.tick(x, y, &self.matrix, &newMatrix, &self.tickResult),
-                    3 => Dalye.tick(x, y, &self.matrix, &newMatrix, &self.tickResult),
-                    4 => Separator.tick(x, y, &self.matrix, &newMatrix, &self.tickResult),
-                    else => continue,
-                }
+        for (self.notvoidBlocks.items) |i| {
+            const x = i[0];
+            const y = i[1];
+
+            const cell = self.matrix[x][y];
+
+            switch (cell.id) {
+                1 => EnargyBlock.tick(x, y, &self.matrix, &newMatrix, &self.tickResult),
+                2 => Button.tick(x, y, &self.matrix, &newMatrix, &self.tickResult),
+                3 => Dalye.tick(x, y, &self.matrix, &newMatrix, &self.tickResult),
+                4 => Separator.tick(x, y, &self.matrix, &newMatrix, &self.tickResult),
+                else => continue,
             }
         }
 

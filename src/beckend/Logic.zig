@@ -6,6 +6,7 @@ const EnargyBlock = @import("Blocks/EnergyBloc.zig").EnergyBlock;
 const Button = @import("Blocks/Button.zig").Button;
 const Dalye = @import("Blocks/Dalye.zig").Dalye;
 const Separator = @import("Blocks/Separator.zig").Separator;
+const Lamp = @import("Blocks/Lamp.zig").Lamp;
 
 const NewTickBlock = @import("OtherTypes.zig").NewTickBlock;
 const DefaultBlock = @import("Blocks/DefaultBlock.zig").DefaultBlock;
@@ -37,6 +38,7 @@ pub const GameLogic = struct {
             Button,
             Dalye,
             Separator,
+            Lamp,
         };
 
         registeredBlocks.appendSlice(allocator, @constCast(&BLocks)) catch {

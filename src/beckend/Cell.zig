@@ -13,13 +13,38 @@ pub const Cell = struct {
 };
 
 pub const Check = struct {
+    pub fn checkVoid(
+        x: usize,
+        y: usize,
+        matrix: *[][1000]Cell,
+        newMatrix: *[][1000]Cell,
+        buffResult: *std.ArrayList(NewTickBlock),
+        logic: *const fn (
+            matrix: *[][1000]Cell,
+            newMatrix: *[][1000]Cell,
+            x: usize,
+            y: usize,
+            ux: usize,
+            uy: usize,
+            buffResult: *std.ArrayList(NewTickBlock),
+            cell: Cell,
+        ) void,
+    ) void {
+        _ = x;
+        _ = y;
+        _ = matrix;
+        _ = newMatrix;
+        _ = buffResult;
+        _ = logic;
+    }
+
     pub fn clockwiseCheck3x3(
         x: usize,
         y: usize,
         matrix: *[][1000]Cell,
         newMatrix: *[][1000]Cell,
         buffResult: *std.ArrayList(NewTickBlock),
-        logic: fn (
+        logic: *const fn (
             matrix: *[][1000]Cell,
             newMatrix: *[][1000]Cell,
             x: usize,
@@ -61,7 +86,7 @@ pub const Check = struct {
         matrix: *[][1000]Cell,
         newMatrix: *[][1000]Cell,
         buffResult: *std.ArrayList(NewTickBlock),
-        logic: fn (
+        logic: *const fn (
             matrix: *[][1000]Cell,
             newMatrix: *[][1000]Cell,
             x: usize,

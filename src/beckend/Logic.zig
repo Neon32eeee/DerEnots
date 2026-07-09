@@ -1,10 +1,14 @@
 const std = @import("std");
 const Cell = @import("Cell.zig").Cell;
+
+const Void = @import("Blocks/Void.zig").Void;
 const EnargyBlock = @import("Blocks/EnergyBloc.zig").EnergyBlock;
 const Button = @import("Blocks/Button.zig").Button;
 const Dalye = @import("Blocks/Dalye.zig").Dalye;
 const Separator = @import("Blocks/Separator.zig").Separator;
+
 const NewTickBlock = @import("OtherTypes.zig").NewTickBlock;
+const DefaultBlock = @import("Blocks/DefaultBlock.zig").DefaultBlock;
 
 const allocator = std.heap.wasm_allocator;
 
@@ -16,13 +20,28 @@ pub const GameLogic = struct {
     matrix: [][1000]Cell,
     tickResult: std.ArrayList(NewTickBlock),
     notvoidBlocks: std.ArrayList([2]usize),
+    registeredBlocks: std.ArrayList(DefaultBlock),
 
     pub inline fn init() ?*GameLogic {
         const matrix = allocator.alloc([1000]Cell, 1000) catch {
             return null;
         };
-        const tickResult = std.ArrayList(NewTickBlock){};
-        const notvoidBlocks = std.ArrayList([2]usize){};
+        const tickResult = std.ArrayList(NewTickBlock).empty;
+        const notvoidBlocks = std.ArrayList([2]usize).empty;
+
+        var registeredBlocks = std.ArrayList(DefaultBlock).empty;
+
+        var BLocks = [_]DefaultBlock{
+            Void,
+            EnargyBlock,
+            Button,
+            Dalye,
+            Separator,
+        };
+
+        registeredBlocks.appendSlice(allocator, @constCast(&BLocks)) catch {
+            return null;
+        };
 
         for (0..1000) |x| {
             for (0..1000) |y| {
@@ -37,6 +56,7 @@ pub const GameLogic = struct {
             .matrix = matrix,
             .tickResult = tickResult,
             .notvoidBlocks = notvoidBlocks,
+            .registeredBlocks = registeredBlocks,
         };
         return ptr;
     }
@@ -52,28 +72,8 @@ pub const GameLogic = struct {
 
         self.matrix[x][y].id = newId;
 
-        const newBlock = [2]usize{ x, y };
-        switch (newId) {
-            0 => {
-                for (self.notvoidBlocks.items, 0..) |i, id| {
-                    if (i[0] == x and i[1] == y) {
-                        _ = self.notvoidBlocks.swapRemove(id);
-                    }
-                }
-                self.matrix[x][y].status = newStatus;
-                return 0;
-            },
-            3 => {
-                self.matrix[x][y].status = ((newStatus * 10) << 16) | ((newStatus * 10) & 0xFFFF);
-                self.notvoidBlocks.append(allocator, newBlock) catch return 1;
-                return 0;
-            },
-            else => {
-                self.matrix[x][y].status = newStatus;
-                self.notvoidBlocks.append(allocator, newBlock) catch return 1;
-                return 0;
-            },
-        }
+        if (newId > self.registeredBlocks.items.len) return 1;
+        return self.registeredBlocks.items[newId].update(self, x, y, newStatus);
     }
 
     pub fn tick(self: *GameLogic) ?[*]NewTickBlock {
@@ -87,13 +87,8 @@ pub const GameLogic = struct {
 
             const cell = self.matrix[x][y];
 
-            switch (cell.id) {
-                1 => EnargyBlock.tick(x, y, &self.matrix, &newMatrix, &self.tickResult),
-                2 => Button.tick(x, y, &self.matrix, &newMatrix, &self.tickResult),
-                3 => Dalye.tick(x, y, &self.matrix, &newMatrix, &self.tickResult),
-                4 => Separator.tick(x, y, &self.matrix, &newMatrix, &self.tickResult),
-                else => continue,
-            }
+            if (@as(usize, @intCast(cell.id)) > self.registeredBlocks.items.len) return null;
+            self.registeredBlocks.items[@intCast(cell.id)].tick(x, y, &self.matrix, &newMatrix, &self.tickResult);
         }
 
         numTick += 1;
